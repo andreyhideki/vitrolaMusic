@@ -1,0 +1,107 @@
+# Vitrola Music
+
+Player de áudio web inspirado no Spotify: busca por música, artista ou álbum, capas e metadados, playlists, reprodução sequencial ou aleatória e fila de reprodução.
+
+```
+vitrolaMusic/
+├── api/        # Express 5 + SQLite (busca, metadados, playlists, streaming com Range)
+└── frontend/   # React + Vite + TypeScript + Zustand (player, fila, interface)
+```
+
+## Como rodar
+
+### Com Docker (recomendado)
+
+Requisito: Docker com Compose v2 (Docker Desktop ou Docker Engine).
+
+```bash
+make up        # constrói as imagens e sobe API + frontend em segundo plano
+```
+
+- Frontend: http://localhost:5173
+- API: http://localhost:3001/api/health
+
+Os arquivos são montados por volume, então as alterações no código recarregam sozinhas. Os dados ficam em `./data` no host (banco, mídia e a pasta `./data/import`).
+
+Principais comandos (`make help` lista todos):
+
+| Comando | Função |
+|---|---|
+| `make up` | Sobe os containers (com build) |
+| `make down` | Para os containers |
+| `make logs` | Acompanha os logs |
+| `make ps` | Estado dos containers |
+| `make test` | Roda os testes da fila do player |
+| `make typecheck` | Verifica tipos da API e do frontend |
+| `make shell-api` / `make shell-web` | Abre um shell em cada container |
+| `make reset` | Recria os volumes de `node_modules` (após mudar dependências) |
+| `make clean` | Remove containers, volumes e imagens do projeto (não apaga `./data`) |
+
+### Sem Docker
+
+Requisitos: Node.js 20+, [yt-dlp](https://github.com/yt-dlp/yt-dlp) e ffmpeg no PATH.
+
+```bash
+# Exemplo no Ubuntu/Debian:
+# sudo apt install ffmpeg python3-pip
+# python3 -m pip install --break-system-packages yt-dlp
+
+make local-install                 # instala dependências de api/ e frontend/
+cd api && npm run dev              # http://localhost:3001
+cd frontend && npm run dev         # http://localhost:5173
+```
+
+### Variáveis de ambiente (opcionais)
+
+| Variável | Padrão | Função |
+|---|---|---|
+| `PORT` | `3001` | Porta da API |
+| `DATA_DIR` | `./data` | Banco SQLite e pasta de mídia |
+| `IMPORT_DIR` | `./data/import` | Pasta onde você coloca os arquivos de áudio que possui |
+| `CORS_ORIGIN` | `http://localhost:5173` | Origem permitida no CORS |
+
+## Como as músicas chegam ao player
+
+1. Você busca na barra de pesquisa. A API consulta o catálogo público do Deezer (metadados e capas, sem áudio).
+2. Ao importar uma faixa ou álbum, a API cria os registros locais e enfileira o download.
+3. O download usa **fontes de áudio** (`api/src/services/downloader.ts`). A ordem de busca é:
+   1. `localFolderProvider`: procura o arquivo na pasta `IMPORT_DIR` pelo nome (`Artista - Título.mp3`, por exemplo) e copia para `data/media`.
+   2. `ytdlpProvider`: se não encontrar localmente, busca no YouTube com `yt-dlp`, converte para MP3 e salva em `data/media`.
+4. Quando a faixa fica `ready`, o player toca via `/api/tracks/:id/stream`, com suporte a HTTP `Range`.
+
+> **Aviso legal:** O download de áudio do YouTube pode violar os Termos de Serviço da plataforma e/ou direitos autorais. Use essa funcionalidade apenas para conteúdo que você tem permissão de baixar e reproduzir. O projeto também continua suportando arquivos locais e músicas com licença livre.
+
+## Estrutura da API
+
+| Método | Rota | Função |
+|---|---|---|
+| GET | `/api/search?q=` | Busca na biblioteca local e no catálogo externo |
+| POST | `/api/import/track` | Importa uma faixa do catálogo e enfileira o download |
+| POST | `/api/import/album` | Importa um álbum com todas as faixas |
+| GET | `/api/albums/:id` | Álbum com capa e faixas |
+| GET | `/api/artists/:id` | Artista com discografia local |
+| GET | `/api/tracks/:id` | Status de uma faixa |
+| POST | `/api/tracks/:id/download` | Tenta baixar de novo |
+| GET | `/api/tracks/:id/stream` | Streaming do áudio (206 Partial Content) |
+| GET/POST | `/api/playlists` | Lista e cria playlists |
+| GET/PATCH/DELETE | `/api/playlists/:id` | Detalhe, edição e exclusão |
+| POST | `/api/playlists/:id/tracks` | Adiciona faixas ao fim |
+| DELETE | `/api/playlists/:id/entries/:entryId` | Remove um item |
+| PATCH | `/api/playlists/:id/order` | Reordena os itens |
+
+## Funcionalidades do player
+
+- Reprodução de playlist ou álbum em ordem sequencial ou aleatória (shuffle sem repetir antes de tocar todas).
+- Ligar ou desligar o shuffle sem interromper a faixa atual.
+- Repetir: desligado, playlist inteira ou faixa atual.
+- "Tocar a seguir" e "Adicionar à fila" (fila avulsa com prioridade).
+- Pula faixas que ainda não foram baixadas e faixas com erro.
+- Pré-carregamento da próxima faixa e integração com Media Session (controles do sistema e tela de bloqueio).
+- Fila e configurações salvas em `localStorage`, para restaurar após recarregar a página.
+
+## Próximos passos sugeridos
+
+- Service Worker com cache de áudio para tocar sem internet (plano original, fase 6).
+- Persistir a fila no servidor, se quiser sincronizar entre dispositivos.
+- Reordenar por arrastar e soltar (`dnd-kit`), no lugar dos botões ↑ ↓.
+- Trocar o SQLite por PostgreSQL e as tarefas em memória por BullMQ + Redis, se a carga crescer.

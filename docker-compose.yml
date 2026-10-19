@@ -1,0 +1,41 @@
+# Ambiente local completo: API + frontend, com hot reload.
+# Uso: make up   (ou: docker compose up -d --build)
+
+services:
+  api:
+    build: ./api
+    image: vitrola-api:dev
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+      DATA_DIR: /app/data
+      IMPORT_DIR: /app/data/import
+      CORS_ORIGIN: http://localhost:5173
+    volumes:
+      - ./api:/app
+      - api_node_modules:/app/node_modules
+      # Banco, mídia baixada e pasta de importação ficam no host, em ./data
+      - ./data:/app/data
+    restart: unless-stopped
+
+  web:
+    build: ./frontend
+    image: vitrola-web:dev
+    ports:
+      - "5173:5173"
+    environment:
+      # Destino do proxy /api do Vite, dentro da rede do compose
+      API_TARGET: http://api:3001
+      # Necessário para hot reload em bind mounts (macOS e Windows)
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - ./frontend:/app
+      - web_node_modules:/app/node_modules
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  api_node_modules:
+  web_node_modules:
