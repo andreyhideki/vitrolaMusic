@@ -2,9 +2,12 @@ import { useEffect, useState } from 'react';
 import { api, AppSettings, TrackDto } from './api';
 import { useLibrary } from './library';
 import { useNav, View } from './nav';
+import { useUi } from './ui';
 import { usePlayerStore } from './player/store';
 import { PlayerAudioConfig, usePlayerAudio } from './player/usePlayerAudio';
+import { useTheme } from './theme';
 import { Sidebar } from './components/Sidebar';
+import { Header } from './components/Header';
 import { PlayerBar } from './components/PlayerBar';
 import { LibraryView } from './views/LibraryView';
 import { SearchView } from './views/SearchView';
@@ -37,6 +40,12 @@ let streamWithoutDownload = false;
 
 export function App() {
   const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const theme = useTheme((s) => s.theme);
+
+  useEffect(() => {
+    document.body.classList.remove('theme-dark', 'theme-light');
+    document.body.classList.add(`theme-${theme}`);
+  }, [theme]);
 
   useEffect(() => {
     api<AppSettings>('/settings')
@@ -80,15 +89,19 @@ export function App() {
 
   usePlayerAudio(playerConfig);
   const view = useNav((s) => s.view);
+  const sidebarCollapsed = useUi((s) => s.sidebarCollapsed);
 
   if (!settingsLoaded) return null;
 
   return (
-    <div className="app">
+    <div className={`app ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       <Sidebar />
-      <main>
-        <Main view={view} />
-      </main>
+      <div className="main-area">
+        <Header />
+        <main>
+          <Main view={view} />
+        </main>
+      </div>
       <PlayerBar />
     </div>
   );
