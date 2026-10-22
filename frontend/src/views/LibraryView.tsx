@@ -6,11 +6,17 @@ import { useNav } from '../nav';
 import { playerControls } from '../player/usePlayerAudio';
 import { TrackList } from '../components/TrackList';
 
+interface LibraryState {
+  genre: number | '';
+}
+
 export function LibraryView() {
+  const { saveState, getState } = useNav();
+  const saved = getState<LibraryState>({ kind: 'library' });
   const [library, setLibrary] = useState<LibraryResponse | null>(null);
   const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
   const [genres, setGenres] = useState<GenreDto[]>([]);
-  const [genre, setGenre] = useState<number | ''>('');
+  const [genre, setGenre] = useState<number | ''>(saved?.genre ?? '');
   const [error, setError] = useState('');
   const [confirm, setConfirm] = useState<{ open: boolean; title: string; message: string; onConfirm: () => void } | null>(null);
   const go = useNav((s) => s.go);
@@ -34,6 +40,7 @@ export function LibraryView() {
 
   useEffect(() => {
     load();
+    saveState({ kind: 'library' }, { genre });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [genre]);
 

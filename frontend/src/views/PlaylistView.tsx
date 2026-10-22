@@ -6,12 +6,19 @@ import { useNav } from '../nav';
 import { playerControls } from '../player/usePlayerAudio';
 import { fmtBitrate, fmtDuration, STATUS_LABEL } from '../format';
 
+interface PlaylistViewState {
+  query: string;
+  searchResults: TrackDto[];
+}
+
 export function PlaylistView({ id }: { id: number }) {
+  const { saveState, getState } = useNav();
+  const saved = getState<PlaylistViewState>({ kind: 'playlist', id });
   const [detail, setDetail] = useState<PlaylistDetail | null>(null);
   const [error, setError] = useState('');
   const [confirm, setConfirm] = useState<{ open: boolean; title: string; message: string; onConfirm: () => void } | null>(null);
-  const [query, setQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<TrackDto[]>([]);
+  const [query, setQuery] = useState(saved?.query ?? '');
+  const [searchResults, setSearchResults] = useState<TrackDto[]>(saved?.searchResults ?? []);
   const [suggestions, setSuggestions] = useState<TrackDto[]>([]);
   const [adding, setAdding] = useState<Set<number>>(new Set());
   const go = useNav((s) => s.go);
@@ -40,12 +47,15 @@ export function PlaylistView({ id }: { id: number }) {
   useEffect(() => {
     setDetail(null);
     setError('');
-    setQuery('');
-    setSearchResults([]);
     load();
     loadSuggestions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  useEffect(() => {
+    saveState({ kind: 'playlist', id }, { query, searchResults });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, searchResults]);
 
   if (!detail) return error ? <p className="error">{error}</p> : <p className="muted">Carregando…</p>;
 

@@ -7,6 +7,11 @@ import { TrackList } from '../components/TrackList';
 const HISTORY_KEY = 'vitrola-search-history';
 const HISTORY_LIMIT = 10;
 
+interface SearchViewState {
+  query: string;
+  result: SearchResponse | null;
+}
+
 function loadHistory(): string[] {
   try {
     const raw = localStorage.getItem(HISTORY_KEY);
@@ -26,9 +31,11 @@ function saveHistory(history: string[]) {
 }
 
 export function SearchView() {
-  const [query, setQuery] = useState('');
+  const { saveState, getState } = useNav();
+  const saved = getState<SearchViewState>({ kind: 'search' });
+  const [query, setQuery] = useState(saved?.query ?? '');
   const [history, setHistory] = useState<string[]>([]);
-  const [result, setResult] = useState<SearchResponse | null>(null);
+  const [result, setResult] = useState<SearchResponse | null>(saved?.result ?? null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [imported, setImported] = useState<Set<string>>(new Set());
@@ -37,6 +44,11 @@ export function SearchView() {
   useEffect(() => {
     setHistory(loadHistory());
   }, []);
+
+  useEffect(() => {
+    saveState({ kind: 'search' }, { query, result });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, result]);
 
   async function doSearch(q: string) {
     const trimmed = q.trim();
