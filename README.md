@@ -1,6 +1,6 @@
 # Vitrola Music
 
-Player de áudio web inspirado no Spotify: busca por música, artista ou álbum, capas e metadados, playlists, reprodução sequencial ou aleatória e fila de reprodução.
+Player de áudio web inspirado no Spotify: busca por música, artista ou álbum, capas e metadados, playlists, reprodução sequencial ou aleatória, fila de reprodução e downloads do YouTube.
 
 ```
 vitrolaMusic/
@@ -78,16 +78,22 @@ cd frontend && npm run dev         # http://localhost:5173
 | GET | `/api/search?q=` | Busca na biblioteca local e no catálogo externo |
 | POST | `/api/import/track` | Importa uma faixa do catálogo e enfileira o download |
 | POST | `/api/import/album` | Importa um álbum com todas as faixas |
-| GET | `/api/albums/:id` | Álbum com capa e faixas |
+| GET | `/api/albums/:id` | Álbum com capa e faixas (status normalizado pela existência do arquivo) |
+| GET | `/api/preview/album?deezerId=` | Pré-visualização de álbum do catálogo |
 | GET | `/api/artists/:id` | Artista com discografia local |
 | GET | `/api/tracks/:id` | Status de uma faixa |
+| GET | `/api/tracks/:id/progress` | Percentual e status do download |
 | POST | `/api/tracks/:id/download` | Tenta baixar de novo |
 | GET | `/api/tracks/:id/stream` | Streaming do áudio (206 Partial Content) |
+| GET | `/api/tracks/:id/stream-url` | URL de stream direto do YouTube (modo sem download) |
 | GET/POST | `/api/playlists` | Lista e cria playlists |
 | GET/PATCH/DELETE | `/api/playlists/:id` | Detalhe, edição e exclusão |
 | POST | `/api/playlists/:id/tracks` | Adiciona faixas ao fim |
+| GET | `/api/playlists/:id/suggestions` | Sugestões de faixas pelo gênero dominante |
 | DELETE | `/api/playlists/:id/entries/:entryId` | Remove um item |
 | PATCH | `/api/playlists/:id/order` | Reordena os itens |
+| GET | `/api/library/search?q=` | Busca faixas na biblioteca local |
+| GET/POST | `/api/settings` | Lê/altera configurações (qualidade, pasta de mídia, stream) |
 
 ## Funcionalidades do player
 
@@ -97,7 +103,18 @@ cd frontend && npm run dev         # http://localhost:5173
 - "Tocar a seguir" e "Adicionar à fila" (fila avulsa com prioridade).
 - Pula faixas que ainda não foram baixadas e faixas com erro.
 - Pré-carregamento da próxima faixa e integração com Media Session (controles do sistema e tela de bloqueio).
+- Player fixo na parte inferior, sempre visível mesmo com scroll longo.
 - Fila e configurações salvas em `localStorage`, para restaurar após recarregar a página.
+
+## Funcionalidades da interface
+
+- **Tema claro/escuro:** alternância persistente no topo da aplicação.
+- **Sidebar colapsável:** menu lateral pode exibir apenas ícones e logo reduzido; estado persistido.
+- **Navegação voltar/avançar:** botões no topo permitem retornar e avançar entre telas, preservando filtros e resultados de busca.
+- **Histórico de buscas:** as últimas 10 buscas ficam salvas e podem ser reexecutadas.
+- **Download com progresso:** telas de álbum e pré-visualização mostram barra de progresso ao importar faixas.
+- **Modal de confirmação:** exclusões de álbuns, faixas e playlists usam um modal customizado.
+- **Playlists:** adicionar, remover, reordenar, buscar músicas na biblioteca e receber sugestões por gênero (até 10 faixas).
 
 ## Próximos passos sugeridos
 
