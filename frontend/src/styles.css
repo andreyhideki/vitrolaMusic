@@ -1,10 +1,32 @@
-:root {
+:root,
+body.theme-dark {
   --bg: #121212;
   --panel: #181818;
   --card: #282828;
   --text: #ffffff;
   --muted: #b3b3b3;
   --accent: #1db954;
+  --border: #444;
+  --input-bg: #2a2a2a;
+  --overlay: #000000aa;
+  --hover-bg: #ffffff12;
+  --track-bg: #535353;
+  --notice-bg: #333;
+}
+
+body.theme-light {
+  --bg: #f5f5f5;
+  --panel: #ffffff;
+  --card: #eeeeee;
+  --text: #111111;
+  --muted: #666666;
+  --accent: #1db954;
+  --border: #cccccc;
+  --input-bg: #ffffff;
+  --overlay: #00000066;
+  --hover-bg: #00000010;
+  --track-bg: #dddddd;
+  --notice-bg: #e0e0e0;
 }
 
 * { box-sizing: border-box; }
@@ -19,20 +41,109 @@ body {
 .app {
   display: grid;
   grid-template-columns: 220px 1fr;
-  grid-template-rows: 1fr 96px;
-  height: 100vh;
+  grid-template-rows: 1fr;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding-bottom: 96px;
+}
+
+.app.sidebar-collapsed {
+  grid-template-columns: 80px 1fr;
+}
+
+.main-area {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  gap: 16px;
+}
+
+.top-bar .nav-buttons { display: flex; gap: 8px; }
+.top-bar .nav-buttons button {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-toggle {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
 }
 
 .sidebar {
-  background: #000;
+  background: var(--panel);
   padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  border-right: 1px solid var(--border);
+  position: relative;
 }
+
+.sidebar.collapsed {
+  padding: 16px 8px;
+  align-items: center;
+}
+
 .sidebar .brand { font-weight: 700; font-size: 22px; }
+.sidebar .brand-logo { width: 100%; max-width: 160px; max-height: 160px; height: auto; display: block; object-fit: contain; }
+.sidebar.collapsed .brand-logo { max-width: 48px; max-height: 48px; }
+
+.sidebar .collapse-toggle {
+  position: absolute;
+  top: 12px;
+  right: -14px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  z-index: 10;
+}
+
 .sidebar nav { display: flex; flex-direction: column; gap: 8px; }
-.sidebar nav button { text-align: left; border: none; padding: 8px 4px; }
+.sidebar nav button,
+.sidebar .sidebar-footer button {
+  text-align: left;
+  border: none;
+  padding: 8px 4px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sidebar.collapsed nav button,
+.sidebar.collapsed .sidebar-footer button {
+  justify-content: center;
+  padding: 8px;
+}
+
+.sidebar .menu-icon { font-size: 18px; }
+.sidebar .menu-label { white-space: nowrap; }
 
 main {
   overflow-y: auto;
@@ -40,21 +151,34 @@ main {
   background: linear-gradient(#222, var(--bg) 320px);
 }
 
+body.theme-light main {
+  background: linear-gradient(#e0e0e0, var(--bg) 320px);
+}
+
 .player {
-  grid-column: 1 / -1;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 96px;
   display: grid;
-  grid-template-columns: 1fr 2fr 1fr;
+  grid-template-columns: 220px 2fr 1fr;
   align-items: center;
   gap: 16px;
   padding: 0 16px;
   background: var(--panel);
-  border-top: 1px solid #282828;
+  border-top: 1px solid var(--border);
+  z-index: 50;
+}
+
+.app.sidebar-collapsed .player {
+  grid-template-columns: 80px 2fr 1fr;
 }
 
 button {
   background: none;
   color: inherit;
-  border: 1px solid #444;
+  border: 1px solid var(--border);
   border-radius: 999px;
   padding: 6px 14px;
   cursor: pointer;
@@ -85,9 +209,9 @@ button.play {
 }
 
 input, select {
-  background: #2a2a2a;
+  background: var(--input-bg);
   color: var(--text);
-  border: 1px solid #444;
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 6px 8px;
   font: inherit;
@@ -178,7 +302,7 @@ button.small { padding: 4px 10px; font-size: 12px; }
   padding: 8px;
   border-radius: 6px;
 }
-.track:hover { background: #ffffff12; }
+.track:hover { background: var(--hover-bg); }
 .track.unavailable .info { opacity: 0.6; }
 .track .num { width: 24px; text-align: right; }
 .track .info { flex: 1; min-width: 0; }
@@ -190,7 +314,7 @@ button.small { padding: 4px 10px; font-size: 12px; }
 .status.failed { color: #ff6b6b; font-size: 12px; }
 
 .track-progress { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
-.track-progress-bar { position: relative; width: 120px; height: 4px; background: #535353; border-radius: 2px; overflow: hidden; }
+.track-progress-bar { position: relative; width: 120px; height: 4px; background: var(--track-bg); border-radius: 2px; overflow: hidden; }
 .track-progress-fill { position: absolute; top: 0; left: 0; height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s ease; }
 
 .track.playing .title { color: var(--accent); }
@@ -220,13 +344,14 @@ button.small { padding: 4px 10px; font-size: 12px; }
 }
 
 .ext-row { display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 6px; }
-.ext-row:hover { background: #ffffff12; }
+.ext-row:hover { background: var(--hover-bg); }
 .ext-row img { width: 48px; height: 48px; border-radius: 4px; object-fit: cover; }
 .ext-row .info { flex: 1; min-width: 0; }
 
-.chips span {
+.chips span,
+.chips button.badge {
   display: inline-block;
-  background: #2a2a2a;
+  background: var(--card);
   padding: 4px 10px;
   border-radius: 999px;
   margin: 0 6px 6px 0;
@@ -250,7 +375,7 @@ button.small { padding: 4px 10px; font-size: 12px; }
   position: fixed;
   bottom: 110px;
   right: 20px;
-  background: #333;
+  background: var(--notice-bg);
   padding: 8px 14px;
   border-radius: 6px;
 }
@@ -258,7 +383,7 @@ button.small { padding: 4px 10px; font-size: 12px; }
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: #000000aa;
+  background: var(--overlay);
   display: flex;
   align-items: center;
   justify-content: center;
