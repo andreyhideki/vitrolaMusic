@@ -73,6 +73,7 @@
 - Endpoint `GET /api/tracks/:id/progress` retorna percentual e status do download, também verificando a existência real do arquivo no disco.
 - Normalização de status no endpoint de álbum pela existência real do arquivo em disco.
 - Modal de confirmação customizado (`frontend/src/components/ConfirmModal.tsx`) para exclusão de álbuns, faixas e playlists, substituindo o `confirm` nativo do navegador.
+- PWA — Fase 1 (instalável): manifest, ícones PWA (`frontend/public/pwa-*.png`, `apple-touch-icon.png`), meta tags mobile, safe areas e Service Worker gerado pelo `vite-plugin-pwa` com prompt de atualização (`frontend/src/components/PwaReloadPrompt.tsx`).
 
 ### Em andamento / desenvolvimento
 
@@ -85,3 +86,4 @@
 - Valide alterações de tipo com `make typecheck` antes de considerar a tarefa pronta.
 - Não confie cegamente em `download_status = 'ready'`: verifique a existência do arquivo no disco quando o status afetar a UI.
 - Mantenha este `AGENTS.md` atualizado conforme novas features, regras ou gotchas forem descobertos.
+- O Service Worker do PWA está habilitado também em desenvolvimento (`devOptions.enabled: true`). Se comportamentos estranhos de cache atrapalharem o hot reload, desabilite temporariamente no `vite.config.ts` ou use uma aba anônima.

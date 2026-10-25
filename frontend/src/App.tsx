@@ -9,6 +9,7 @@ import { useTheme } from './theme';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { PlayerBar } from './components/PlayerBar';
+import { PwaReloadPrompt } from './components/PwaReloadPrompt';
 import { LibraryView } from './views/LibraryView';
 import { SearchView } from './views/SearchView';
 import { AlbumView } from './views/AlbumView';
@@ -103,6 +104,7 @@ export function App() {
         </main>
       </div>
       <PlayerBar />
+      <PwaReloadPrompt />
     </div>
   );
 }

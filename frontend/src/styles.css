@@ -61,7 +61,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 24px;
+  padding: max(12px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) 12px max(24px, env(safe-area-inset-left));
   background: var(--panel);
   border-bottom: 1px solid var(--border);
   gap: 16px;
@@ -91,7 +91,7 @@ body {
 
 .sidebar {
   background: var(--panel);
-  padding: 20px;
+  padding: max(20px, env(safe-area-inset-top)) 20px 20px max(20px, env(safe-area-inset-left));
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -147,7 +147,7 @@ body {
 
 main {
   overflow-y: auto;
-  padding: 24px;
+  padding: 24px max(24px, env(safe-area-inset-right)) 24px max(24px, env(safe-area-inset-left));
   background: linear-gradient(#222, var(--bg) 320px);
 }
 
@@ -157,7 +157,7 @@ body.theme-light main {
 
 .player {
   position: fixed;
-  bottom: 0;
+  bottom: env(safe-area-inset-bottom, 0px);
   left: 0;
   right: 0;
   height: 96px;
@@ -165,7 +165,7 @@ body.theme-light main {
   grid-template-columns: 220px 2fr 1fr;
   align-items: center;
   gap: 16px;
-  padding: 0 16px;
+  padding: 0 max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
   background: var(--panel);
   border-top: 1px solid var(--border);
   z-index: 50;
@@ -378,6 +378,41 @@ button.small { padding: 4px 10px; font-size: 12px; }
   background: var(--notice-bg);
   padding: 8px 14px;
   border-radius: 6px;
+}
+
+.pwa-toast {
+  position: fixed;
+  bottom: max(110px, calc(96px + env(safe-area-inset-bottom, 0px) + 14px));
+  right: max(20px, env(safe-area-inset-right, 0px));
+  left: max(20px, env(safe-area-inset-left, 0px));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  padding: 12px 16px;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px #0008;
+  z-index: 100;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.pwa-toast span { flex: 1; }
+
+.pwa-toast button {
+  padding: 6px 12px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .pwa-toast {
+    right: 12px;
+    left: 12px;
+    flex-wrap: wrap;
+  }
 }
 
 .modal-overlay {
