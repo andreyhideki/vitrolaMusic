@@ -7,7 +7,6 @@ const MENU = [
   { kind: 'library' as const, label: 'Início', icon: '🏠' },
   { kind: 'search' as const, label: 'Buscar', icon: '🔍' },
   { kind: 'playlists' as const, label: 'Playlists', icon: '🎵' },
-  { kind: 'analytics' as const, label: 'Paranoic', icon: '📊' },
 ];
 
 export function Sidebar() {
@@ -53,6 +52,14 @@ export function Sidebar() {
         ))}
       </nav>
       <div className="sidebar-footer" style={{ marginTop: 'auto' }}>
+        <button
+          className={view.kind === 'analytics' ? 'active' : ''}
+          onClick={() => go({ kind: 'analytics' })}
+          title="Paranoic"
+        >
+          <span className="menu-icon">📊</span>
+          {!collapsed && <span className="menu-label">Paranoic</span>}
+        </button>
         <button onClick={() => setSettingsOpen(true)} title="Configurações">
           <span className="menu-icon">⚙</span>
           {!collapsed && <span className="menu-label">Configurações</span>}
