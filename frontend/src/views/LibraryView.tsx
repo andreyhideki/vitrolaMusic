@@ -5,6 +5,7 @@ import { useLibrary } from '../library';
 import { useNav } from '../nav';
 import { playerControls } from '../player/usePlayerAudio';
 import { TrackList } from '../components/TrackList';
+import { fmtBytes } from '../format';
 
 interface LibraryState {
   genre: number | '';
@@ -16,6 +17,7 @@ export function LibraryView() {
   const [library, setLibrary] = useState<LibraryResponse | null>(null);
   const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
   const [genres, setGenres] = useState<GenreDto[]>([]);
+  const [usage, setUsage] = useState<{ bytes: number; trackCount: number } | null>(null);
   const [genre, setGenre] = useState<number | ''>(saved?.genre ?? '');
   const [error, setError] = useState('');
   const [confirm, setConfirm] = useState<{ open: boolean; title: string; message: string; onConfirm: () => void } | null>(null);
@@ -23,15 +25,17 @@ export function LibraryView() {
 
   async function load() {
     try {
-      const [lib, plist, glist] = await Promise.all([
+      const [lib, plist, glist, u] = await Promise.all([
         api<LibraryResponse>(genre === '' ? '/library' : `/library?genre=${genre}`),
         api<PlaylistSummary[]>('/playlists'),
         api<GenreDto[]>('/library/genres'),
+        api<{ bytes: number; trackCount: number }>('/library/usage'),
       ]);
       useLibrary.getState().upsert(lib.tracks);
       setLibrary(lib);
       setPlaylists(plist);
       setGenres(glist);
+      setUsage(u);
       setError('');
     } catch (err) {
       setError(errorMessage(err));
@@ -121,6 +125,12 @@ export function LibraryView() {
                   playlists.length > 0 ? ` · ${playlists.length} playlists` : ''
                 }`
               : 'Carregando…'}
+            {usage && (
+              <>
+                <br />
+                {fmtBytes(usage.bytes)} usados ({usage.trackCount} faixas baixadas)
+              </>
+            )}
           </p>
         </div>
         <div className="actions">

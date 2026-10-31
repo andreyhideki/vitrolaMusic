@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { send } from '../api';
 import { usePlayerStore } from './store';
 import { usePlayback } from './playback';
 import * as Q from './queue';
@@ -60,7 +61,10 @@ async function loadTrack(id: string, autoplay: boolean) {
   try {
     el.src = await urlFor(id);
     updateMediaSession(id);
-    if (autoplay) el.play().catch(() => {});
+    if (autoplay) {
+      el.play().catch(() => {});
+      send('POST', `/tracks/${id}/played`).catch(() => {});
+    }
   } catch {
     playerControls.next();
   }

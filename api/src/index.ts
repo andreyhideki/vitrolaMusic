@@ -12,6 +12,7 @@ import { libraryRouter } from './routes/library.js';
 import { settingsRouter } from './routes/settings.js';
 import { previewRouter } from './routes/preview.js';
 import { resumeDownloads } from './services/downloader.js';
+import { startCleanupScheduler } from './services/cleanup.js';
 
 const app = express();
 
@@ -52,4 +53,5 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
 app.listen(config.port, () => {
   console.log(`Vitrola API em http://localhost:${config.port}`);
   resumeDownloads();
+  startCleanupScheduler();
 });

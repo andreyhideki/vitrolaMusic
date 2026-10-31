@@ -31,6 +31,13 @@ tracksRouter.get('/:id', (req, res) => {
   res.json(track);
 });
 
+tracksRouter.post('/:id/played', (req, res) => {
+  const id = parseId(req.params.id);
+  if (!repo.getTrack(id)) throw new HttpError(404, 'Faixa não encontrada');
+  repo.updateLastPlayed(id);
+  res.status(204).end();
+});
+
 tracksRouter.post('/:id/download', (req, res) => {
   const id = parseId(req.params.id);
   if (!repo.getTrack(id)) throw new HttpError(404, 'Faixa não encontrada');

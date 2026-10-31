@@ -21,3 +21,11 @@ export function fmtBitrate(kbps: number | null): string {
   if (!kbps || kbps <= 0) return '';
   return `${kbps} kbps`;
 }
+
+export function fmtBytes(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
+  const value = bytes / 1024 ** i;
+  return `${value.toFixed(i === 0 ? 0 : 2)} ${units[i]}`;
+}

@@ -247,6 +247,10 @@ export function setTrackBitrate(id: number, bitrateKbps: number): void {
   db.prepare('UPDATE tracks SET bitrate_kbps = ? WHERE id = ?').run(bitrateKbps, id);
 }
 
+export function updateLastPlayed(id: number): void {
+  db.prepare("UPDATE tracks SET last_played_at = datetime('now') WHERE id = ?").run(id);
+}
+
 export function deleteTrack(id: number): { filePath: string | null } {
   const row = db.prepare('SELECT file_path FROM tracks WHERE id = ?').get(id) as { file_path: string | null } | undefined;
   db.prepare('DELETE FROM tracks WHERE id = ?').run(id);

@@ -49,6 +49,7 @@ export interface AppSettings {
   audioQuality: 'low' | 'medium' | 'high';
   mediaDir: string;
   streamWithoutDownload: boolean;
+  cleanupUnusedAfterDays: number;
 }
 
 export interface ArtistDto {

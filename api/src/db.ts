@@ -18,6 +18,10 @@ if (!hasColumn('tracks', 'bitrate_kbps')) {
   db.exec(`ALTER TABLE tracks ADD COLUMN bitrate_kbps INTEGER`);
 }
 
+if (!hasColumn('tracks', 'last_played_at')) {
+  db.exec(`ALTER TABLE tracks ADD COLUMN last_played_at TEXT`);
+}
+
 db.exec(`
 CREATE TABLE IF NOT EXISTS artists (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

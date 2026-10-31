@@ -31,6 +31,9 @@
 - O downloader (`api/src/services/downloader.ts`) tenta primeiro arquivo local em `IMPORT_DIR`, depois busca a faixa em uma fonte externa via `externalProvider` (`api/src/services/external.ts`).
 - O container da API já inclui `ffmpeg`, `python3` e a ferramenta de download. Não é necessário instalar no host quando usa Docker.
 - Metadados externos vêm de `api/src/services/catalogApi.ts`. Identificadores externos usam o prefixo `catalog:`; a migração em `api/src/db.ts` converte prefixos legados ao iniciar.
+- A tabela `tracks` possui a coluna `last_played_at`. O endpoint `POST /api/tracks/:id/played` registra a reprodução; o player chama esse endpoint ao iniciar uma faixa.
+- A tela inicial mostra o espaço usado pelas músicas baixadas via `GET /api/library/usage`.
+- A configuração `cleanupUnusedAfterDays` (0 = desativado) define em quantos dias faixas baixadas e não tocadas são removidas automaticamente pelo scheduler (`api/src/services/cleanup.ts`); o valor de 180 dias está disponível na UI.
 - Nome final dos arquivos: `Artista - Álbum - Título.mp3`.
 - Status de download (`pending` | `downloading` | `ready` | `failed`) fica na tabela `tracks`. O endpoint `GET /api/albums/:id` normaliza o status pela existência real do arquivo no disco: se o arquivo existe, é `ready`; se não existe, nunca é `ready`.
 
