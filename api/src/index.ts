@@ -11,6 +11,8 @@ import { playlistsRouter } from './routes/playlists.js';
 import { libraryRouter } from './routes/library.js';
 import { settingsRouter } from './routes/settings.js';
 import { previewRouter } from './routes/preview.js';
+import { playsRouter } from './routes/plays.js';
+import { analyticsRouter } from './routes/analytics.js';
 import { resumeDownloads } from './services/downloader.js';
 import { startCleanupScheduler } from './services/cleanup.js';
 
@@ -30,6 +32,8 @@ app.use('/api/playlists', playlistsRouter);
 app.use('/api/library', libraryRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/preview', previewRouter);
+app.use('/api/plays', playsRouter);
+app.use('/api/analytics', analyticsRouter);
 app.use('/api', catalogRouter);
 
 app.use((_req, _res, next) => {

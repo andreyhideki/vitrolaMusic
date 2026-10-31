@@ -98,6 +98,19 @@ export interface SearchResponse {
   warning?: string;
 }
 
+export type AnalyticsPeriod = 'week' | 'month' | 'year';
+
+export interface AnalyticsResponse {
+  totalPlays: number;
+  totalSkipped: number;
+  totalSeconds: number;
+  topTracks: { trackTitle: string; artistName: string | null; plays: number; seconds: number }[];
+  topArtists: { name: string | null; plays: number; seconds: number }[];
+  topAlbums: { albumTitle: string | null; artistName: string | null; plays: number; seconds: number }[];
+  topGenres: { name: string | null; plays: number; seconds: number }[];
+  timeline: { bucket: string; plays: number; seconds: number; skipped: number }[];
+}
+
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`/api${path}`, {
     ...init,

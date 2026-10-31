@@ -267,6 +267,124 @@ export function deleteAlbum(id: number): { filePaths: string[] } {
   return { filePaths };
 }
 
+// ---------- analytics ----------
+
+export interface PlayInput {
+  trackId: number;
+  playedSeconds: number;
+  durationSeconds: number | null;
+  skipped: boolean;
+}
+
+export function recordPlay(input: PlayInput) {
+  const track = getTrack(input.trackId);
+  const row = db
+    .prepare(
+      `INSERT INTO plays (track_id, track_title, artist_name, album_title, genre_name, played_seconds, duration_seconds, skipped, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now')) RETURNING id`
+    )
+    .get(
+      track?.id ?? input.trackId,
+      track?.title ?? '',
+      track?.artistName ?? null,
+      track?.albumTitle ?? null,
+      track?.genreName ?? null,
+      input.playedSeconds,
+      input.durationSeconds,
+      input.skipped ? 1 : 0,
+    ) as { id: number };
+  return row.id;
+}
+
+export type AnalyticsPeriod = 'week' | 'month' | 'year';
+
+export interface AnalyticsResponse {
+  totalPlays: number;
+  totalSkipped: number;
+  totalSeconds: number;
+  topTracks: { trackTitle: string; artistName: string | null; plays: number; seconds: number }[];
+  topArtists: { name: string | null; plays: number; seconds: number }[];
+  topAlbums: { albumTitle: string | null; artistName: string | null; plays: number; seconds: number }[];
+  topGenres: { name: string | null; plays: number; seconds: number }[];
+  timeline: { bucket: string; plays: number; seconds: number; skipped: number }[];
+}
+
+function bucketFormat(period: AnalyticsPeriod): string {
+  switch (period) {
+    case 'week':
+      return "strftime('%Y-W%W', created_at)";
+    case 'month':
+      return "strftime('%Y-%m', created_at)";
+    case 'year':
+      return "strftime('%Y', created_at)";
+  }
+}
+
+export function getAnalytics(period: AnalyticsPeriod): AnalyticsResponse {
+  const fmt = bucketFormat(period);
+  const limit = 10;
+
+  const totals = db
+    .prepare('SELECT COUNT(*) c, COALESCE(SUM(skipped),0) s, COALESCE(SUM(played_seconds),0) sec FROM plays')
+    .get() as { c: number; s: number; sec: number };
+
+  const topTracks = db
+    .prepare(
+      `SELECT track_title, artist_name, COUNT(*) plays, COALESCE(SUM(played_seconds),0) seconds
+       FROM plays GROUP BY track_title, artist_name ORDER BY plays DESC LIMIT ?`
+    )
+    .all(limit) as { track_title: string; artist_name: string | null; plays: number; seconds: number }[];
+
+  const topArtists = db
+    .prepare(
+      `SELECT artist_name, COUNT(*) plays, COALESCE(SUM(played_seconds),0) seconds
+       FROM plays GROUP BY artist_name ORDER BY plays DESC LIMIT ?`
+    )
+    .all(limit) as { artist_name: string | null; plays: number; seconds: number }[];
+
+  const topAlbums = db
+    .prepare(
+      `SELECT album_title, artist_name, COUNT(*) plays, COALESCE(SUM(played_seconds),0) seconds
+       FROM plays GROUP BY album_title, artist_name ORDER BY plays DESC LIMIT ?`
+    )
+    .all(limit) as { album_title: string | null; artist_name: string | null; plays: number; seconds: number }[];
+
+  const topGenres = db
+    .prepare(
+      `SELECT genre_name, COUNT(*) plays, COALESCE(SUM(played_seconds),0) seconds
+       FROM plays GROUP BY genre_name ORDER BY plays DESC LIMIT ?`
+    )
+    .all(limit) as { genre_name: string | null; plays: number; seconds: number }[];
+
+  const timeline = db
+    .prepare(
+      `SELECT ${fmt} bucket, COUNT(*) plays, COALESCE(SUM(played_seconds),0) seconds, COALESCE(SUM(skipped),0) skipped
+       FROM plays GROUP BY bucket ORDER BY bucket`
+    )
+    .all() as { bucket: string; plays: number; seconds: number; skipped: number }[];
+
+  return {
+    totalPlays: totals.c,
+    totalSkipped: totals.s,
+    totalSeconds: totals.sec,
+    topTracks: topTracks.map((r) => ({
+      trackTitle: r.track_title,
+      artistName: r.artist_name,
+      plays: r.plays,
+      seconds: r.seconds,
+    })),
+    topArtists: topArtists.map((r) => ({ name: r.artist_name, plays: r.plays, seconds: r.seconds })),
+    topAlbums: topAlbums.map((r) => ({
+      albumTitle: r.album_title,
+      artistName: r.artist_name,
+      plays: r.plays,
+      seconds: r.seconds,
+    })),
+    topGenres: topGenres.map((r) => ({ name: r.genre_name, plays: r.plays, seconds: r.seconds })),
+    timeline,
+  };
+}
+
 // ---------- playlists ----------
 
 function touchPlaylist(id: number): void {

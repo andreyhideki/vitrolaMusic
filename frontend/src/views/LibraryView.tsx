@@ -214,12 +214,6 @@ export function LibraryView() {
                   <div>{a.title}</div>
                   <div className="muted">{a.artistName}</div>
                 </button>
-                <button
-                  className="danger small"
-                  onClick={() => askDeleteAlbum(a)}
-                >
-                  Excluir
-                </button>
               </div>
             );
           })}

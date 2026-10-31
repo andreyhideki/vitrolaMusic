@@ -56,7 +56,24 @@ function updateMediaSession(id: string) {
   });
 }
 
+let endedNaturally = false;
+
+async function recordPlay(skipped: boolean) {
+  const id = store.getState().currentTrackId;
+  if (!id) return;
+  const el = getAudio();
+  const playedSeconds = Math.floor(el.currentTime || 0);
+  const durationSeconds = Number.isFinite(el.duration) ? Math.floor(el.duration) : null;
+  send('POST', '/plays', {
+    trackId: Number(id),
+    playedSeconds,
+    durationSeconds,
+    skipped,
+  }).catch(() => {});
+}
+
 async function loadTrack(id: string, autoplay: boolean) {
+  endedNaturally = false;
   const el = getAudio();
   try {
     el.src = await urlFor(id);
@@ -92,6 +109,11 @@ async function preloadNext() {
  * que ainda não estão prontas. Só o resultado final entra no store.
  */
 async function go(from: Q.QueueState, advance: Advance): Promise<string | null> {
+  if (!endedNaturally) {
+    void recordPlay(true);
+  }
+  endedNaturally = false;
+
   let step = advance(from);
 
   for (
@@ -208,6 +230,8 @@ export function usePlayerAudio(cfg: PlayerAudioConfig) {
       if (el.getAttribute('src')) playerControls.next();
     };
     const onEnded = () => {
+      void recordPlay(false);
+      endedNaturally = true;
       void playerControls.ended();
     };
 

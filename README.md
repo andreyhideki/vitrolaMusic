@@ -79,11 +79,12 @@ cd frontend && npm run dev         # http://localhost:5173
 | POST | `/api/import/track` | Importa uma faixa do catálogo e enfileira o download |
 | POST | `/api/import/album` | Importa um álbum com todas as faixas |
 | GET | `/api/albums/:id` | Álbum com capa e faixas (status normalizado pela existência do arquivo) |
-| GET | `/api/preview/album` | Pré-visualização de álbum do catálogo externo |
+| GET | `/api/preview/album?catalogId=` | Pré-visualização de álbum do catálogo externo |
 | GET | `/api/artists/:id` | Artista com discografia local |
 | GET | `/api/tracks/:id` | Status de uma faixa |
 | GET | `/api/tracks/:id/progress` | Percentual e status do download |
 | POST | `/api/tracks/:id/download` | Tenta baixar de novo |
+| POST | `/api/tracks/:id/played` | Registra que a faixa foi reproduzida |
 | GET | `/api/tracks/:id/stream` | Streaming do áudio (206 Partial Content) |
 | GET | `/api/tracks/:id/stream-url` | URL de stream direto da fonte externa (modo sem download) |
 | GET/POST | `/api/playlists` | Lista e cria playlists |
@@ -93,7 +94,10 @@ cd frontend && npm run dev         # http://localhost:5173
 | DELETE | `/api/playlists/:id/entries/:entryId` | Remove um item |
 | PATCH | `/api/playlists/:id/order` | Reordena os itens |
 | GET | `/api/library/search?q=` | Busca faixas na biblioteca local |
-| GET/POST | `/api/settings` | Lê/altera configurações (qualidade, pasta de mídia, stream) |
+| GET | `/api/library/usage` | Espaço em disco usado pelas faixas baixadas |
+| GET/POST | `/api/settings` | Lê/altera configurações (qualidade, pasta de mídia, stream, limpeza) |
+| POST | `/api/plays` | Registra uma reprodução (com tempo ouvido e pulo) |
+| GET | `/api/analytics?period=` | Estatísticas de plays por semana, mês ou ano |
 
 ## Funcionalidades do player
 
@@ -103,22 +107,29 @@ cd frontend && npm run dev         # http://localhost:5173
 - "Tocar a seguir" e "Adicionar à fila" (fila avulsa com prioridade).
 - Pula faixas que ainda não foram baixadas e faixas com erro.
 - Pré-carregamento da próxima faixa e integração com Media Session (controles do sistema e tela de bloqueio).
+- Registra cada reprodução (total ou parcial) e contabiliza pulos para estatísticas.
 - Player fixo na parte inferior, sempre visível mesmo com scroll longo.
 - Fila e configurações salvas em `localStorage`, para restaurar após recarregar a página.
 
 ## Funcionalidades da interface
 
 - **Tema claro/escuro:** alternância persistente no topo da aplicação.
-- **Sidebar colapsável:** menu lateral pode exibir apenas ícones e logo reduzido; estado persistido.
+- **Sidebar colapsável:** menu lateral pode exibir apenas ícones e logo reduzido; estado persistido; scroll independente do conteúdo.
 - **Navegação voltar/avançar:** botões no topo permitem retornar e avançar entre telas, preservando filtros e resultados de busca.
+- **Home/dashboard:** saudação, contagem de álbuns/faixas/playlists, espaço usado em disco e ações rápidas "Tocar tudo" / "Aleatório".
+- **Capas de álbum com play:** botão verde de play em destaque nas capas para tocar o álbum direto da home.
+- **Busca unificada:** resultados ordenados em Álbuns, Playlists (locais) e Músicas; campo de busca fixo ao rolar; botão de limpar texto dentro do input; artistas clicáveis para nova busca.
 - **Histórico de buscas:** as últimas 10 buscas ficam salvas e podem ser reexecutadas.
 - **Download com progresso:** telas de álbum e pré-visualização mostram barra de progresso ao importar faixas.
 - **Modal de confirmação:** exclusões de álbuns, faixas e playlists usam um modal customizado.
 - **Playlists:** adicionar, remover, reordenar, buscar músicas na biblioteca e receber sugestões por gênero (até 10 faixas).
+- **Estatísticas:** tela de analytics com totalizadores, ranking por música/artista/álbum/gênero e gráficos por semana, mês ou ano.
+- **Limpeza automática:** opção de remover faixas baixadas e não tocadas após 180 dias.
+- **PWA:** manifest, ícones e Service Worker para instalação.
 
 ## Próximos passos sugeridos
 
-- Service Worker com cache de áudio para tocar sem internet (plano original, fase 6).
+- Cache de áudio no Service Worker para tocar sem internet.
 - Persistir a fila no servidor, se quiser sincronizar entre dispositivos.
 - Reordenar por arrastar e soltar (`dnd-kit`), no lugar dos botões ↑ ↓.
 - Trocar o SQLite por PostgreSQL e as tarefas em memória por BullMQ + Redis, se a carga crescer.

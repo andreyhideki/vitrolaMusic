@@ -95,12 +95,25 @@ export function SearchView() {
     <section>
       <div className="search-sticky">
         <form className="search" onSubmit={onSubmit}>
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Música, artista ou álbum"
-            autoFocus
-          />
+          <div className="search-input-wrap">
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Música, artista ou álbum"
+              autoFocus
+            />
+            {query && (
+              <button
+                type="button"
+                className="clear-input"
+                onClick={() => setQuery('')}
+                aria-label="Limpar busca"
+                title="Limpar busca"
+              >
+                ×
+              </button>
+            )}
+          </div>
           <button disabled={busy}>{busy ? 'Buscando…' : 'Buscar'}</button>
         </form>
       </div>

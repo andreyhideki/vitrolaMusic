@@ -78,6 +78,21 @@ CREATE TABLE IF NOT EXISTS playlist_entries (
 
 CREATE INDEX IF NOT EXISTS idx_entries_playlist ON playlist_entries(playlist_id, position);
 
+CREATE TABLE IF NOT EXISTS plays (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  track_id INTEGER REFERENCES tracks(id) ON DELETE SET NULL,
+  track_title TEXT NOT NULL,
+  artist_name TEXT,
+  album_title TEXT,
+  genre_name TEXT,
+  played_seconds INTEGER NOT NULL DEFAULT 0,
+  duration_seconds INTEGER,
+  skipped INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_plays_created_at ON plays(created_at);
+
 CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
