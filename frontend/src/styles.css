@@ -107,6 +107,7 @@ body {
   max-height: calc(100vh - 96px - env(safe-area-inset-bottom, 0px));
   max-height: calc(100dvh - 96px - env(safe-area-inset-bottom, 0px));
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .sidebar.collapsed {
@@ -121,7 +122,7 @@ body {
 .sidebar .collapse-toggle {
   position: absolute;
   top: 12px;
-  right: -14px;
+  right: 8px;
   width: 28px;
   height: 28px;
   padding: 0;
