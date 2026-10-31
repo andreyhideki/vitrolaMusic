@@ -148,7 +148,6 @@ export function SearchView() {
                     <div>{a.title}</div>
                     <div className="muted">{a.artistName} · álbum</div>
                   </div>
-                  <span className="muted">Ver álbum</span>
                 </button>
               ))}
             </>
