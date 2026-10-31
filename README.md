@@ -1,6 +1,6 @@
 # Vitrola Music
 
-Player de áudio web inspirado no Spotify: busca por música, artista ou álbum, capas e metadados, playlists, reprodução sequencial ou aleatória, fila de reprodução e downloads do YouTube.
+Player de áudio web com busca por música, artista ou álbum, capas e metadados, playlists, reprodução sequencial ou aleatória, fila de reprodução e downloads de faixas para a biblioteca local.
 
 ```
 vitrolaMusic/
@@ -39,12 +39,12 @@ Principais comandos (`make help` lista todos):
 
 ### Sem Docker
 
-Requisitos: Node.js 20+, [yt-dlp](https://github.com/yt-dlp/yt-dlp) e ffmpeg no PATH.
+Requisitos: Node.js 20+, uma ferramenta de download de mídia e ffmpeg no PATH.
 
 ```bash
 # Exemplo no Ubuntu/Debian:
 # sudo apt install ffmpeg python3-pip
-# python3 -m pip install --break-system-packages yt-dlp
+# Instale também a ferramenta de download de mídia de sua preferência.
 
 make local-install                 # instala dependências de api/ e frontend/
 cd api && npm run dev              # http://localhost:3001
@@ -62,14 +62,14 @@ cd frontend && npm run dev         # http://localhost:5173
 
 ## Como as músicas chegam ao player
 
-1. Você busca na barra de pesquisa. A API consulta o catálogo público do Deezer (metadados e capas, sem áudio).
+1. Você busca na barra de pesquisa. A API consulta um catálogo público externo (metadados e capas, sem áudio).
 2. Ao importar uma faixa ou álbum, a API cria os registros locais e enfileira o download.
 3. O download usa **fontes de áudio** (`api/src/services/downloader.ts`). A ordem de busca é:
    1. `localFolderProvider`: procura o arquivo na pasta `IMPORT_DIR` pelo nome (`Artista - Título.mp3`, por exemplo) e copia para `data/media`.
-   2. `ytdlpProvider`: se não encontrar localmente, busca no YouTube com `yt-dlp`, converte para MP3 e salva em `data/media`.
+   2. provedor externo: se não encontrar localmente, busca a faixa em uma fonte externa de áudio, converte para MP3 e salva em `data/media`.
 4. Quando a faixa fica `ready`, o player toca via `/api/tracks/:id/stream`, com suporte a HTTP `Range`.
 
-> **Aviso legal:** O download de áudio do YouTube pode violar os Termos de Serviço da plataforma e/ou direitos autorais. Use essa funcionalidade apenas para conteúdo que você tem permissão de baixar e reproduzir. O projeto também continua suportando arquivos locais e músicas com licença livre.
+> **Aviso legal:** O download de áudio de fontes externas pode violar os Termos de Serviço da plataforma e/ou direitos autorais. Use essa funcionalidade apenas para conteúdo que você tem permissão de baixar e reproduzir. O projeto também continua suportando arquivos locais e músicas com licença livre.
 
 ## Estrutura da API
 
@@ -79,13 +79,13 @@ cd frontend && npm run dev         # http://localhost:5173
 | POST | `/api/import/track` | Importa uma faixa do catálogo e enfileira o download |
 | POST | `/api/import/album` | Importa um álbum com todas as faixas |
 | GET | `/api/albums/:id` | Álbum com capa e faixas (status normalizado pela existência do arquivo) |
-| GET | `/api/preview/album?deezerId=` | Pré-visualização de álbum do catálogo |
+| GET | `/api/preview/album` | Pré-visualização de álbum do catálogo externo |
 | GET | `/api/artists/:id` | Artista com discografia local |
 | GET | `/api/tracks/:id` | Status de uma faixa |
 | GET | `/api/tracks/:id/progress` | Percentual e status do download |
 | POST | `/api/tracks/:id/download` | Tenta baixar de novo |
 | GET | `/api/tracks/:id/stream` | Streaming do áudio (206 Partial Content) |
-| GET | `/api/tracks/:id/stream-url` | URL de stream direto do YouTube (modo sem download) |
+| GET | `/api/tracks/:id/stream-url` | URL de stream direto da fonte externa (modo sem download) |
 | GET/POST | `/api/playlists` | Lista e cria playlists |
 | GET/PATCH/DELETE | `/api/playlists/:id` | Detalhe, edição e exclusão |
 | POST | `/api/playlists/:id/tracks` | Adiciona faixas ao fim |

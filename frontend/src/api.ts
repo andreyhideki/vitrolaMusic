@@ -41,8 +41,8 @@ export interface LibraryResponse {
 
 export interface AlbumPreviewResponse {
   album: AlbumDto;
-  tracks: (TrackDto & { deezerId: string; localTrackId: number | null })[];
-  deezerId: string;
+  tracks: (TrackDto & { catalogId: string; localTrackId: number | null })[];
+  catalogId: string;
 }
 
 export interface AppSettings {
@@ -72,7 +72,7 @@ export interface PlaylistDetail {
 }
 
 export interface ExternalTrack {
-  deezerId: string;
+  catalogId: string;
   title: string;
   artistName: string;
   albumTitle: string;
@@ -81,7 +81,7 @@ export interface ExternalTrack {
 }
 
 export interface ExternalAlbum {
-  deezerId: string;
+  catalogId: string;
   title: string;
   artistName: string;
   coverUrl: string | null;
@@ -92,7 +92,7 @@ export interface SearchResponse {
   external: {
     tracks: ExternalTrack[];
     albums: ExternalAlbum[];
-    artists: { deezerId: string; name: string; imageUrl: string | null }[];
+    artists: { catalogId: string; name: string; imageUrl: string | null }[];
   };
   warning?: string;
 }

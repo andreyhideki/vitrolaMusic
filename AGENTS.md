@@ -28,8 +28,9 @@
 
 ## Downloads e fontes de áudio
 
-- O downloader (`api/src/services/downloader.ts`) tenta primeiro arquivo local em `IMPORT_DIR`, depois busca no YouTube via `yt-dlp`.
-- O container da API já inclui `ffmpeg`, `python3` e `yt-dlp`. Não é necessário instalar no host quando usa Docker.
+- O downloader (`api/src/services/downloader.ts`) tenta primeiro arquivo local em `IMPORT_DIR`, depois busca a faixa em uma fonte externa via `externalProvider` (`api/src/services/external.ts`).
+- O container da API já inclui `ffmpeg`, `python3` e a ferramenta de download. Não é necessário instalar no host quando usa Docker.
+- Metadados externos vêm de `api/src/services/catalogApi.ts`. Identificadores externos usam o prefixo `catalog:`; a migração em `api/src/db.ts` converte prefixos legados ao iniciar.
 - Nome final dos arquivos: `Artista - Álbum - Título.mp3`.
 - Status de download (`pending` | `downloading` | `ready` | `failed`) fica na tabela `tracks`. O endpoint `GET /api/albums/:id` normaliza o status pela existência real do arquivo no disco: se o arquivo existe, é `ready`; se não existe, nunca é `ready`.
 
@@ -62,10 +63,10 @@
 
 ## Estado atual / Features implementadas
 
-- Busca unificada (biblioteca local + catálogo externo do Deezer), com resultados ordenados em Álbuns, Playlists (locais) e Músicas.
+- Busca unificada (biblioteca local + catálogo externo), com resultados ordenados em Álbuns, Playlists (locais) e Músicas.
 - Página inicial (`frontend/src/views/LibraryView.tsx`, menu "Início") em estilo dashboard: saudação, contagem de álbuns/faixas/playlists e ações "Tocar tudo" / "Aleatório".
 - Capas de álbum na página inicial têm botão de play verde em destaque que toca o álbum inteiro sem abrir a tela do álbum.
-- Importação de faixas e álbuns do Deezer, com enfileiramento automático de downloads.
+- Importação de faixas e álbuns do catálogo externo, com enfileiramento automático de downloads.
 - Player com fila, shuffle, repeat, "tocar a seguir", "adicionar à fila", Media Session e pré-carregamento da próxima faixa.
 - Playlists: criar, editar, excluir, adicionar/remover/reordenar faixas, buscar músicas na biblioteca para adicionar e sugestões por gênero (até 10 faixas).
 - Tela de álbum (`frontend/src/views/AlbumView.tsx`) mostrando faixas baixadas e não baixadas, com botão "Importar" e barra de progresso do download.

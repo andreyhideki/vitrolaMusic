@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { deezer } from '../services/deezer.js';
+import { catalogApi } from '../services/catalogApi.js';
 import { db } from '../db.js';
 import { HttpError } from '../http.js';
 
@@ -8,10 +8,10 @@ const yearOf = (date?: string | null): number | null => (date ? Number(date.slic
 export const previewRouter = Router();
 
 previewRouter.get('/album', async (req, res) => {
-  const deezerId = String(req.query.deezerId ?? '');
-  if (!/^\d{1,20}$/.test(deezerId)) throw new HttpError(400, 'deezerId inválido');
+  const catalogId = String(req.query.catalogId ?? '');
+  if (!/^\d{1,20}$/.test(catalogId)) throw new HttpError(400, 'catalogId inválido');
 
-  const a = await deezer.album(deezerId).catch(() => null);
+  const a = await catalogApi.album(catalogId).catch(() => null);
   if (!a?.id) throw new HttpError(404, 'Álbum não encontrado no catálogo');
 
   const album = {
@@ -26,7 +26,7 @@ previewRouter.get('/album', async (req, res) => {
   };
 
   const tracks = (a.tracks?.data ?? []).map((t: any, i: number) => {
-    const extId = `deezer:track:${t.id}`;
+    const extId = `catalog:track:${t.id}`;
     const local = db.prepare('SELECT id, download_status, file_path, bitrate_kbps FROM tracks WHERE ext_id = ?').get(extId) as
       | { id: number; download_status: string; file_path: string | null; bitrate_kbps: number | null }
       | undefined;
@@ -47,10 +47,10 @@ previewRouter.get('/album', async (req, res) => {
       genreId: null,
       genreName: null,
       bitrateKbps: isReady ? (local?.bitrate_kbps ?? null) : null,
-      deezerId: String(t.id),
+      catalogId: String(t.id),
       localTrackId: local?.id ?? null,
     };
   });
 
-  res.json({ album, tracks, deezerId });
+  res.json({ album, tracks, catalogId });
 });

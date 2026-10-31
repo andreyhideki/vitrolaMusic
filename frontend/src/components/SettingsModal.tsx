@@ -84,9 +84,9 @@ export function SettingsModal({ open, onClose }: Props) {
                 checked={settings.streamWithoutDownload}
                 onChange={(e) => setSettings({ ...settings, streamWithoutDownload: e.target.checked })}
               />
-              <span>Tocar via streaming do YouTube sem baixar</span>
+              <span>Tocar via streaming externo sem baixar</span>
             </label>
-            <p className="hint">Quando ativo, o player toca diretamente do YouTube se o arquivo ainda não estiver baixado.</p>
+            <p className="hint">Quando ativo, o player toca diretamente da fonte externa se o arquivo ainda não estiver baixado.</p>
           </div>
 
           <div className="form-group">

@@ -27,7 +27,7 @@ function Main({ view }: { view: View }) {
     case 'album':
       return <AlbumView id={view.id} />;
     case 'albumPreview':
-      return <AlbumPreviewView deezerId={view.deezerId} />;
+      return <AlbumPreviewView catalogId={view.catalogId} />;
     case 'playlists':
       return <PlaylistsView />;
     case 'playlist':

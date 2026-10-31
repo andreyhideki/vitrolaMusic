@@ -5,7 +5,7 @@ import { config } from '../config.js';
 import { db } from '../db.js';
 import * as repo from '../repo.js';
 import { getEffectiveMediaDir } from '../settings.js';
-import { ytdlpProvider, isTmpYtdlp } from './ytdlp.js';
+import { externalProvider, isTmpExternal } from './external.js';
 import { getAudioBitrate } from './audio-meta.js';
 
 export interface TrackForDownload {
@@ -58,7 +58,7 @@ export const localFolderProvider: AudioProvider = {
   },
 };
 
-const providers: AudioProvider[] = [localFolderProvider, ytdlpProvider];
+const providers: AudioProvider[] = [localFolderProvider, externalProvider];
 
 const CONCURRENCY = 2;
 const MAX_ATTEMPTS = 3;
@@ -111,8 +111,8 @@ async function run(trackId: number): Promise<void> {
     const dest = path.join(getEffectiveMediaDir(), `${fileName}${path.extname(source).toLowerCase()}`);
     await fs.copyFile(source, dest);
 
-    // Se a origem foi um download temporário do yt-dlp, remove para não duplicar.
-    if (isTmpYtdlp(source)) {
+    // Se a origem foi um download temporário da fonte externa, remove para não duplicar.
+    if (isTmpExternal(source)) {
       await fs.rm(source, { force: true });
     }
 

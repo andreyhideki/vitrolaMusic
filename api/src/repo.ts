@@ -192,7 +192,7 @@ export function listLibraryTracks(genreId?: number): TrackDto[] {
   return (genreId === undefined ? stmt.all() : stmt.all(genreId)).map(toTrack) as TrackDto[];
 }
 
-// ---------- upserts (identificados por ext_id, ex.: "deezer:track:123") ----------
+// ---------- upserts (identificados por ext_id, ex.: "catalog:track:123") ----------
 
 export function upsertArtist(extId: string, name: string, imageUrl: string | null): number {
   const row = db.prepare(`

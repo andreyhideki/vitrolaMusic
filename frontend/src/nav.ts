@@ -4,7 +4,7 @@ export type View =
   | { kind: 'library' }
   | { kind: 'search' }
   | { kind: 'album'; id: number }
-  | { kind: 'albumPreview'; deezerId: string }
+  | { kind: 'albumPreview'; catalogId: string }
   | { kind: 'artist'; id: number }
   | { kind: 'playlists' }
   | { kind: 'playlist'; id: number };
@@ -26,7 +26,7 @@ interface NavState {
 function viewKey(v: View): string {
   switch (v.kind) {
     case 'album': return `album:${v.id}`;
-    case 'albumPreview': return `albumPreview:${v.deezerId}`;
+    case 'albumPreview': return `albumPreview:${v.catalogId}`;
     case 'artist': return `artist:${v.id}`;
     case 'playlist': return `playlist:${v.id}`;
     default: return v.kind;

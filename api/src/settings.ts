@@ -50,7 +50,7 @@ export function updateSettings(s: Partial<AppSettings>): AppSettings {
   return getSettings();
 }
 
-export function ytdlpAudioQualityArg(quality: AudioQuality): string {
+export function audioQualityArg(quality: AudioQuality): string {
   switch (quality) {
     case 'low': return '5';
     case 'medium': return '3';

@@ -79,16 +79,16 @@ export function SearchView() {
 
   async function importTrack(t: ExternalTrack) {
     try {
-      const { track } = await send<{ track: TrackDto }>('POST', '/import/track', { deezerId: t.deezerId });
+      const { track } = await send<{ track: TrackDto }>('POST', '/import/track', { catalogId: t.catalogId });
       useLibrary.getState().upsert([track]);
-      setImported((prev) => new Set(prev).add(t.deezerId));
+      setImported((prev) => new Set(prev).add(t.catalogId));
     } catch (err) {
       setError(errorMessage(err));
     }
   }
 
   function openAlbumPreview(a: ExternalAlbum) {
-    go({ kind: 'albumPreview', deezerId: a.deezerId });
+    go({ kind: 'albumPreview', catalogId: a.catalogId });
   }
 
   return (
@@ -138,7 +138,7 @@ export function SearchView() {
               )}
               {result.external.albums.map((a) => (
                 <button
-                  key={a.deezerId}
+                  key={a.catalogId}
                   className="ext-row"
                   onClick={() => openAlbumPreview(a)}
                   style={{ width: '100%', textAlign: 'left' }}
@@ -174,7 +174,7 @@ export function SearchView() {
           <h2>Músicas</h2>
           {result.local.tracks.length > 0 && <TrackList tracks={result.local.tracks} showAlbum />}
           {result.external.tracks.map((t) => (
-            <div key={t.deezerId} className="ext-row">
+            <div key={t.catalogId} className="ext-row">
               {t.coverUrl && <img src={t.coverUrl} alt="" />}
               <div className="info">
                 <div>{t.title}</div>
@@ -182,8 +182,8 @@ export function SearchView() {
                   {t.artistName} · {t.albumTitle}
                 </div>
               </div>
-              <button disabled={imported.has(t.deezerId)} onClick={() => importTrack(t)}>
-                {imported.has(t.deezerId) ? 'Importada' : 'Importar'}
+              <button disabled={imported.has(t.catalogId)} onClick={() => importTrack(t)}>
+                {imported.has(t.catalogId) ? 'Importada' : 'Importar'}
               </button>
             </div>
           ))}
@@ -196,7 +196,7 @@ export function SearchView() {
               <h2>Artistas</h2>
               <div className="chips">
                 {result.external.artists.map((a) => (
-                  <span key={a.deezerId}>{a.name}</span>
+                  <span key={a.catalogId}>{a.name}</span>
                 ))}
               </div>
             </>

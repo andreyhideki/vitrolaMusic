@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as repo from '../repo.js';
-import { deezer } from '../services/deezer.js';
+import { catalogApi } from '../services/catalogApi.js';
 import { HttpError } from '../http.js';
 
 export const searchRouter = Router();
@@ -15,13 +15,13 @@ searchRouter.get('/', async (req, res) => {
 
   try {
     const [tracks, albums, artists] = await Promise.all([
-      deezer.search('track', q),
-      deezer.search('album', q),
-      deezer.search('artist', q),
+      catalogApi.search('track', q),
+      catalogApi.search('album', q),
+      catalogApi.search('artist', q),
     ]);
     external = {
       tracks: tracks.map((t: any) => ({
-        deezerId: String(t.id),
+        catalogId: String(t.id),
         title: t.title,
         artistName: t.artist?.name ?? '',
         albumTitle: t.album?.title ?? '',
@@ -29,13 +29,13 @@ searchRouter.get('/', async (req, res) => {
         durationSeconds: t.duration ?? null,
       })),
       albums: albums.map((a: any) => ({
-        deezerId: String(a.id),
+        catalogId: String(a.id),
         title: a.title,
         artistName: a.artist?.name ?? '',
         coverUrl: a.cover_medium ?? null,
       })),
       artists: artists.map((a: any) => ({
-        deezerId: String(a.id),
+        catalogId: String(a.id),
         name: a.name,
         imageUrl: a.picture_medium ?? null,
       })),

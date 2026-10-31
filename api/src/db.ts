@@ -79,3 +79,11 @@ CREATE TABLE IF NOT EXISTS settings (
   value TEXT NOT NULL
 );
 `);
+
+// Migra prefixos de catálogo usados por versões anteriores.
+const LEGACY_CATALOG_PREFIX = 'deezer:';
+for (const table of ['artists', 'albums', 'tracks']) {
+  db.prepare(
+    `UPDATE OR IGNORE ${table} SET ext_id = 'catalog:' || substr(ext_id, ?) WHERE ext_id LIKE ?`,
+  ).run(LEGACY_CATALOG_PREFIX.length + 1, `${LEGACY_CATALOG_PREFIX}%`);
+}
