@@ -75,7 +75,7 @@ cd frontend && npm run dev         # http://localhost:5173
 
 | Método | Rota | Função |
 |---|---|---|
-| GET | `/api/search?q=` | Busca na biblioteca local e no catálogo externo |
+| GET | `/api/search?q=` | Busca na biblioteca local, playlists locais e no catálogo externo |
 | POST | `/api/import/track` | Importa uma faixa do catálogo e enfileira o download |
 | POST | `/api/import/album` | Importa um álbum com todas as faixas |
 | GET | `/api/albums/:id` | Álbum com capa e faixas (status normalizado pela existência do arquivo) |
@@ -123,7 +123,7 @@ cd frontend && npm run dev         # http://localhost:5173
 - **Download com progresso:** telas de álbum e pré-visualização mostram barra de progresso ao importar faixas.
 - **Modal de confirmação:** exclusões de álbuns, faixas e playlists usam um modal customizado.
 - **Playlists:** adicionar, remover, reordenar, buscar músicas na biblioteca e receber sugestões por gênero (até 10 faixas).
-- **Estatísticas:** tela de analytics com totalizadores, ranking por música/artista/álbum/gênero e gráficos por semana, mês ou ano.
+- **Paranoic (analytics):** tela acessível pelo menu inferior com estatísticas de reprodução — totalizadores, ranking por música/artista/álbum/gênero e gráficos por semana, mês ou ano.
 - **Limpeza automática:** opção de remover faixas baixadas e não tocadas após 180 dias.
 - **PWA:** manifest, ícones e Service Worker para instalação.
 
