@@ -76,6 +76,23 @@ export function LibraryView() {
 
   const [pendingTrack, setPendingTrack] = useState<TrackDto | null>(null);
 
+  const readyTrackIds = (library?.tracks ?? [])
+    .filter((t) => t.downloadStatus === 'ready')
+    .map((t) => String(t.id));
+
+  function albumTrackIds(albumId: number): string[] {
+    return (library?.tracks ?? [])
+      .filter((t) => t.albumId === albumId && t.downloadStatus === 'ready')
+      .map((t) => String(t.id));
+  }
+
+  function greeting(): string {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Bom dia';
+    if (hour < 18) return 'Boa tarde';
+    return 'Boa noite';
+  }
+
   function askDeleteTrack(trackId: number) {
     const t = library?.tracks.find((x) => x.id === trackId) ?? null;
     if (!t) return;
@@ -94,7 +111,34 @@ export function LibraryView() {
 
   return (
     <section>
-      <h1>Biblioteca</h1>
+      <div className="home-hero">
+        <div>
+          <div className="muted">Início</div>
+          <h1>{greeting()}</h1>
+          <p className="muted">
+            {library
+              ? `${library.albums.length} álbuns · ${library.tracks.length} faixas${
+                  playlists.length > 0 ? ` · ${playlists.length} playlists` : ''
+                }`
+              : 'Carregando…'}
+          </p>
+        </div>
+        <div className="actions">
+          <button
+            className="primary"
+            disabled={readyTrackIds.length === 0}
+            onClick={() => playerControls.playPlaylist(readyTrackIds, false)}
+          >
+            Tocar tudo
+          </button>
+          <button
+            disabled={readyTrackIds.length === 0}
+            onClick={() => playerControls.playPlaylist(readyTrackIds, true)}
+          >
+            Aleatório
+          </button>
+        </div>
+      </div>
 
       {error && <p className="error">{error}</p>}
 
@@ -134,21 +178,41 @@ export function LibraryView() {
         <p className="muted">Nenhum álbum baixado ainda.</p>
       ) : (
         <div className="cards">
-          {library?.albums.map((a) => (
-            <div key={a.id} className="card">
-              <button className="card-content" onClick={() => go({ kind: 'album', id: a.id })}>
-                {a.coverUrl ? <img src={a.coverUrl} alt="" /> : <div className="card-placeholder">💿</div>}
-                <div>{a.title}</div>
-                <div className="muted">{a.artistName}</div>
-              </button>
-              <button
-                className="danger small"
-                onClick={() => askDeleteAlbum(a)}
-              >
-                Excluir
-              </button>
-            </div>
-          ))}
+          {library?.albums.map((a) => {
+            const ids = albumTrackIds(a.id);
+            return (
+              <div key={a.id} className="card album-card">
+                <div className="card-cover">
+                  <button
+                    className="card-cover-btn"
+                    onClick={() => go({ kind: 'album', id: a.id })}
+                    aria-label={`Abrir álbum ${a.title}`}
+                  >
+                    {a.coverUrl ? <img src={a.coverUrl} alt="" /> : <div className="card-placeholder">💿</div>}
+                  </button>
+                  <button
+                    className="cover-play"
+                    disabled={ids.length === 0}
+                    onClick={() => playerControls.playPlaylist(ids, false)}
+                    aria-label={`Tocar álbum ${a.title}`}
+                    title="Tocar álbum"
+                  >
+                    ▶
+                  </button>
+                </div>
+                <button className="card-content" onClick={() => go({ kind: 'album', id: a.id })}>
+                  <div>{a.title}</div>
+                  <div className="muted">{a.artistName}</div>
+                </button>
+                <button
+                  className="danger small"
+                  onClick={() => askDeleteAlbum(a)}
+                >
+                  Excluir
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
 

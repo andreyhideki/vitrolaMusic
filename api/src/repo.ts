@@ -156,6 +156,14 @@ export function searchLocal(q: string, limit = 20) {
       .all(like, like, limit) as any[]).map(toAlbum),
     artists: (db.prepare('SELECT id, name, image_url FROM artists WHERE name LIKE ? ORDER BY name LIMIT ?')
       .all(like, limit) as any[]).map(toArtist),
+    playlists: (db.prepare(`
+      SELECT p.id, p.name, p.description,
+        (SELECT COUNT(*) FROM playlist_entries e WHERE e.playlist_id = p.id) AS track_count
+      FROM playlists p
+      WHERE p.name LIKE ? OR p.description LIKE ?
+      ORDER BY p.name LIMIT ?`)
+      .all(like, like, limit) as any[])
+      .map((r) => ({ id: r.id, name: r.name, description: r.description, trackCount: r.track_count })),
   };
 }
 

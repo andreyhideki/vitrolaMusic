@@ -4,7 +4,7 @@ import { useUi } from '../ui';
 import { SettingsModal } from './SettingsModal';
 
 const MENU = [
-  { kind: 'library' as const, label: 'Biblioteca', icon: '🎶' },
+  { kind: 'library' as const, label: 'Início', icon: '🏠' },
   { kind: 'search' as const, label: 'Buscar', icon: '🔍' },
   { kind: 'playlists' as const, label: 'Playlists', icon: '🎵' },
 ];

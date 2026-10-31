@@ -88,7 +88,7 @@ export interface ExternalAlbum {
 }
 
 export interface SearchResponse {
-  local: { tracks: TrackDto[]; albums: AlbumDto[]; artists: ArtistDto[] };
+  local: { tracks: TrackDto[]; albums: AlbumDto[]; artists: ArtistDto[]; playlists: PlaylistSummary[] };
   external: {
     tracks: ExternalTrack[];
     albums: ExternalAlbum[];

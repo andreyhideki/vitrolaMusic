@@ -62,7 +62,9 @@
 
 ## Estado atual / Features implementadas
 
-- Busca unificada (biblioteca local + catálogo externo do Deezer).
+- Busca unificada (biblioteca local + catálogo externo do Deezer), com resultados ordenados em Álbuns, Playlists (locais) e Músicas.
+- Página inicial (`frontend/src/views/LibraryView.tsx`, menu "Início") em estilo dashboard: saudação, contagem de álbuns/faixas/playlists e ações "Tocar tudo" / "Aleatório".
+- Capas de álbum na página inicial têm botão de play verde em destaque que toca o álbum inteiro sem abrir a tela do álbum.
 - Importação de faixas e álbuns do Deezer, com enfileiramento automático de downloads.
 - Player com fila, shuffle, repeat, "tocar a seguir", "adicionar à fila", Media Session e pré-carregamento da próxima faixa.
 - Playlists: criar, editar, excluir, adicionar/remover/reordenar faixas, buscar músicas na biblioteca para adicionar e sugestões por gênero (até 10 faixas).
