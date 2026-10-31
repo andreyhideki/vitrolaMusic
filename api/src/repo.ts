@@ -296,7 +296,7 @@ export function recordPlay(input: PlayInput) {
   return row.id;
 }
 
-export type AnalyticsPeriod = 'week' | 'month' | 'year';
+export type AnalyticsPeriod = 'day' | 'week' | 'month' | 'year';
 
 export interface AnalyticsResponse {
   totalPlays: number;
@@ -311,6 +311,8 @@ export interface AnalyticsResponse {
 
 function bucketFormat(period: AnalyticsPeriod): string {
   switch (period) {
+    case 'day':
+      return "strftime('%Y-%m-%d', created_at)";
     case 'week':
       return "strftime('%Y-W%W', created_at)";
     case 'month':

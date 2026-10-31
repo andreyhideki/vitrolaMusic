@@ -98,7 +98,7 @@ export interface SearchResponse {
   warning?: string;
 }
 
-export type AnalyticsPeriod = 'week' | 'month' | 'year';
+export type AnalyticsPeriod = 'day' | 'week' | 'month' | 'year';
 
 export interface AnalyticsResponse {
   totalPlays: number;

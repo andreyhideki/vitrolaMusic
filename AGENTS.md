@@ -67,7 +67,7 @@
 ## Estado atual / Features implementadas
 
 - Busca unificada (biblioteca local + catálogo externo), com resultados ordenados em Álbuns, Playlists (locais) e Músicas; campo de busca sticky, botão de limpar e artistas clicáveis.
-- Menu "Paranoic" (frontend/src/views/AnalyticsView.tsx) com estatísticas de reprodução: totalizadores, ranking por música/artista/álbum/gênero e gráficos por semana/mês/ano.
+- Menu "Paranoic" (frontend/src/views/AnalyticsView.tsx) com estatísticas de reprodução: totalizadores, ranking por música/artista/álbum/gênero e gráficos por dia/semana/mês/ano.
 - Página inicial (`frontend/src/views/LibraryView.tsx`, menu "Início") em estilo dashboard: saudação, contagem de álbuns/faixas/playlists e ações "Tocar tudo" / "Aleatório".
 - Capas de álbum na página inicial têm botão de play verde em destaque que toca o álbum inteiro sem abrir a tela do álbum.
 - Importação de faixas e álbuns do catálogo externo, com enfileiramento automático de downloads.

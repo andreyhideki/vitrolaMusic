@@ -3,6 +3,7 @@ import { api, AnalyticsPeriod, AnalyticsResponse, errorMessage } from '../api';
 import { fmtDuration, fmtTotalSeconds } from '../format';
 
 const PERIODS: { value: AnalyticsPeriod; label: string }[] = [
+  { value: 'day', label: 'Dia' },
   { value: 'week', label: 'Semana' },
   { value: 'month', label: 'Mês' },
   { value: 'year', label: 'Ano' },

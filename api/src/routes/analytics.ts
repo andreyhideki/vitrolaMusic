@@ -6,7 +6,7 @@ export const analyticsRouter = Router();
 
 analyticsRouter.get('/', (req, res) => {
   const period = req.query.period;
-  if (period !== 'week' && period !== 'month' && period !== 'year') {
+  if (period !== 'day' && period !== 'week' && period !== 'month' && period !== 'year') {
     throw new HttpError(400, 'Período inválido');
   }
   res.json(getAnalytics(period as AnalyticsPeriod));
