@@ -93,15 +93,17 @@ export function SearchView() {
 
   return (
     <section>
-      <form className="search" onSubmit={onSubmit}>
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Música, artista ou álbum"
-          autoFocus
-        />
-        <button disabled={busy}>{busy ? 'Buscando…' : 'Buscar'}</button>
-      </form>
+      <div className="search-sticky">
+        <form className="search" onSubmit={onSubmit}>
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Música, artista ou álbum"
+            autoFocus
+          />
+          <button disabled={busy}>{busy ? 'Buscando…' : 'Buscar'}</button>
+        </form>
+      </div>
 
       {error && <p className="error">{error}</p>}
 
@@ -195,7 +197,14 @@ export function SearchView() {
               <h2>Artistas</h2>
               <div className="chips">
                 {result.external.artists.map((a) => (
-                  <span key={a.catalogId}>{a.name}</span>
+                  <button
+                    key={a.catalogId}
+                    className="badge"
+                    onClick={() => doSearch(a.name)}
+                    title={`Buscar ${a.name}`}
+                  >
+                    {a.name}
+                  </button>
                 ))}
               </div>
             </>

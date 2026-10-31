@@ -293,6 +293,16 @@ input, select {
 .search { display: flex; gap: 8px; margin-bottom: 16px; }
 .search input { flex: 1; max-width: 520px; padding: 10px 14px; border-radius: 999px; }
 
+.search-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--panel);
+  padding: 12px 0;
+  margin: -12px 0 16px;
+  border-bottom: 1px solid var(--border);
+}
+
 .header { display: flex; gap: 24px; align-items: flex-end; margin-bottom: 24px; }
 .header img { width: 200px; height: 200px; box-shadow: 0 8px 24px #0008; object-fit: cover; border-radius: 4px; }
 .header h1 { margin: 0 0 8px; font-size: 40px; }
