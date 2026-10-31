@@ -7,6 +7,7 @@ const MENU = [
   { kind: 'library' as const, label: 'Início', icon: '🏠' },
   { kind: 'search' as const, label: 'Buscar', icon: '🔍' },
   { kind: 'playlists' as const, label: 'Playlists', icon: '🎵' },
+  { kind: 'analytics' as const, label: 'Paranoic', icon: '📊' },
 ];
 
 export function Sidebar() {
@@ -39,9 +40,7 @@ export function Sidebar() {
           <button
             key={item.kind}
             className={
-              (item.kind === 'library' && view.kind === 'library') ||
-              (item.kind === 'search' && view.kind === 'search') ||
-              (item.kind === 'playlists' && inPlaylists)
+              (item.kind === 'playlists' && inPlaylists) || view.kind === item.kind
                 ? 'active'
                 : ''
             }

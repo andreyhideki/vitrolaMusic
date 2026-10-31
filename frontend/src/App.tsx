@@ -17,6 +17,7 @@ import { PlaylistsView } from './views/PlaylistsView';
 import { PlaylistView } from './views/PlaylistView';
 import { ArtistView } from './views/ArtistView';
 import { AlbumPreviewView } from './views/AlbumPreviewView';
+import { AnalyticsView } from './views/AnalyticsView';
 
 function Main({ view }: { view: View }) {
   switch (view.kind) {
@@ -34,6 +35,8 @@ function Main({ view }: { view: View }) {
       return <PlaylistView id={view.id} />;
     case 'artist':
       return <ArtistView id={view.id} />;
+    case 'analytics':
+      return <AnalyticsView />;
   }
 }
 

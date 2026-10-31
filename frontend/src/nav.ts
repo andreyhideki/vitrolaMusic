@@ -7,7 +7,8 @@ export type View =
   | { kind: 'albumPreview'; catalogId: string }
   | { kind: 'artist'; id: number }
   | { kind: 'playlists' }
-  | { kind: 'playlist'; id: number };
+  | { kind: 'playlist'; id: number }
+  | { kind: 'analytics' };
 
 interface NavState {
   view: View;
@@ -29,6 +30,7 @@ function viewKey(v: View): string {
     case 'albumPreview': return `albumPreview:${v.catalogId}`;
     case 'artist': return `artist:${v.id}`;
     case 'playlist': return `playlist:${v.id}`;
+    case 'analytics': return 'analytics';
     default: return v.kind;
   }
 }
