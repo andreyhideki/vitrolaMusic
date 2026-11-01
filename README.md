@@ -131,7 +131,6 @@ cd frontend && npm run dev         # http://localhost:5173
 
 ## Próximos passos sugeridos
 
-- Cache de áudio no Service Worker para tocar sem internet.
 - Persistir a fila no servidor, se quiser sincronizar entre dispositivos.
 - Reordenar por arrastar e soltar (`dnd-kit`), no lugar dos botões ↑ ↓.
 - Trocar o SQLite por PostgreSQL e as tarefas em memória por BullMQ + Redis, se a carga crescer.

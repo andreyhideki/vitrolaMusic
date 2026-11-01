@@ -1,7 +1,7 @@
 {
   "name": "Vitrola Music",
   "short_name": "Vitrola",
-  "description": "Player de áudio web com busca, playlists e reprodução com cache offline.",
+  "description": "Player de áudio web com busca, playlists e reprodução.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
