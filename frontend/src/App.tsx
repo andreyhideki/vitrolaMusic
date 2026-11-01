@@ -9,6 +9,7 @@ import { useTheme } from './theme';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { PlayerBar } from './components/PlayerBar';
+import { PwaReloadPrompt } from './components/PwaReloadPrompt';
 import { LibraryView } from './views/LibraryView';
 import { SearchView } from './views/SearchView';
 import { AlbumView } from './views/AlbumView';
@@ -16,6 +17,7 @@ import { PlaylistsView } from './views/PlaylistsView';
 import { PlaylistView } from './views/PlaylistView';
 import { ArtistView } from './views/ArtistView';
 import { AlbumPreviewView } from './views/AlbumPreviewView';
+import { AnalyticsView } from './views/AnalyticsView';
 
 function Main({ view }: { view: View }) {
   switch (view.kind) {
@@ -26,13 +28,15 @@ function Main({ view }: { view: View }) {
     case 'album':
       return <AlbumView id={view.id} />;
     case 'albumPreview':
-      return <AlbumPreviewView deezerId={view.deezerId} />;
+      return <AlbumPreviewView catalogId={view.catalogId} />;
     case 'playlists':
       return <PlaylistsView />;
     case 'playlist':
       return <PlaylistView id={view.id} />;
     case 'artist':
       return <ArtistView id={view.id} />;
+    case 'analytics':
+      return <AnalyticsView />;
   }
 }
 
@@ -103,6 +107,7 @@ export function App() {
         </main>
       </div>
       <PlayerBar />
+      <PwaReloadPrompt />
     </div>
   );
 }

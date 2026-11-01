@@ -4,7 +4,7 @@ FROM node:20-bookworm
 
 WORKDIR /app
 
-# Instala ferramentas necessárias para download/conversão de áudio via yt-dlp.
+# Instala ferramentas necessárias para download/conversão de áudio.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     python3 \

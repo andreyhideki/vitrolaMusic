@@ -43,13 +43,13 @@ export function PlayerBar() {
             title="Aleatório"
             aria-label="Aleatório"
           >
-            🔀
+            ⇄
           </button>
           <button className="icon" onClick={() => playerControls.previous()} aria-label="Anterior">
-            ⏮
+            {'|<'}
           </button>
           <button
-            className="play"
+            className={`play ${playing ? 'is-pause' : 'is-play'}`}
             disabled={!currentId}
             onClick={() => playerControls.togglePlay()}
             aria-label={playing ? 'Pausar' : 'Tocar'}
@@ -57,7 +57,7 @@ export function PlayerBar() {
             {playing ? '❚❚' : '▶'}
           </button>
           <button className="icon" onClick={() => playerControls.next()} aria-label="Próxima">
-            ⏭
+            {'>|'}
           </button>
           <button
             className={`icon ${repeat !== 'off' ? 'active' : ''}`}
@@ -65,7 +65,7 @@ export function PlayerBar() {
             title={`Repetir: ${repeat}`}
             aria-label="Repetir"
           >
-            {repeat === 'one' ? '🔂' : '🔁'}
+            {repeat === 'one' ? '1↻' : '↻'}
           </button>
         </div>
         <div className="progress">

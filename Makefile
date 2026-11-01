@@ -19,7 +19,7 @@ up: check-docker ## Sobe API e frontend (build + em segundo plano)
 	$(COMPOSE) up -d --build
 	@echo ""
 	@echo "  Frontend: http://localhost:5173"
-	@echo "  API:      http://localhost:3001/api/health"
+	@echo "  API:      http://localhost:5172/api/health"
 	@echo "  Pasta de importação de áudio: ./data/import"
 	@echo ""
 

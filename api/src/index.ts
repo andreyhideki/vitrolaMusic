@@ -11,7 +11,10 @@ import { playlistsRouter } from './routes/playlists.js';
 import { libraryRouter } from './routes/library.js';
 import { settingsRouter } from './routes/settings.js';
 import { previewRouter } from './routes/preview.js';
+import { playsRouter } from './routes/plays.js';
+import { analyticsRouter } from './routes/analytics.js';
 import { resumeDownloads } from './services/downloader.js';
+import { startCleanupScheduler } from './services/cleanup.js';
 
 const app = express();
 
@@ -29,6 +32,8 @@ app.use('/api/playlists', playlistsRouter);
 app.use('/api/library', libraryRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/preview', previewRouter);
+app.use('/api/plays', playsRouter);
+app.use('/api/analytics', analyticsRouter);
 app.use('/api', catalogRouter);
 
 app.use((_req, _res, next) => {
@@ -52,4 +57,5 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
 app.listen(config.port, () => {
   console.log(`Vitrola API em http://localhost:${config.port}`);
   resumeDownloads();
+  startCleanupScheduler();
 });

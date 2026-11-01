@@ -79,29 +79,44 @@ export function SearchView() {
 
   async function importTrack(t: ExternalTrack) {
     try {
-      const { track } = await send<{ track: TrackDto }>('POST', '/import/track', { deezerId: t.deezerId });
+      const { track } = await send<{ track: TrackDto }>('POST', '/import/track', { catalogId: t.catalogId });
       useLibrary.getState().upsert([track]);
-      setImported((prev) => new Set(prev).add(t.deezerId));
+      setImported((prev) => new Set(prev).add(t.catalogId));
     } catch (err) {
       setError(errorMessage(err));
     }
   }
 
   function openAlbumPreview(a: ExternalAlbum) {
-    go({ kind: 'albumPreview', deezerId: a.deezerId });
+    go({ kind: 'albumPreview', catalogId: a.catalogId });
   }
 
   return (
     <section>
-      <form className="search" onSubmit={onSubmit}>
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Música, artista ou álbum"
-          autoFocus
-        />
-        <button disabled={busy}>{busy ? 'Buscando…' : 'Buscar'}</button>
-      </form>
+      <div className="search-sticky">
+        <form className="search" onSubmit={onSubmit}>
+          <div className="search-input-wrap">
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Música, artista ou álbum"
+              autoFocus
+            />
+            {query && (
+              <button
+                type="button"
+                className="clear-input"
+                onClick={() => setQuery('')}
+                aria-label="Limpar busca"
+                title="Limpar busca"
+              >
+                ×
+              </button>
+            )}
+          </div>
+          <button disabled={busy}>{busy ? 'Buscando…' : 'Buscar'}</button>
+        </form>
+      </div>
 
       {error && <p className="error">{error}</p>}
 
@@ -122,42 +137,58 @@ export function SearchView() {
         <>
           {result.warning && <p className="muted">{result.warning}</p>}
 
-          <h2>Na sua biblioteca</h2>
-          {result.local.albums.length > 0 && (
-            <div className="cards">
-              {result.local.albums.map((a) => (
-                <button key={a.id} className="card" onClick={() => go({ kind: 'album', id: a.id })}>
+          <h2>Álbuns</h2>
+          {(result.local.albums.length > 0 || result.external.albums.length > 0) ? (
+            <>
+              {result.local.albums.length > 0 && (
+                <div className="cards">
+                  {result.local.albums.map((a) => (
+                    <button key={a.id} className="card" onClick={() => go({ kind: 'album', id: a.id })}>
+                      {a.coverUrl && <img src={a.coverUrl} alt="" />}
+                      <div>{a.title}</div>
+                      <div className="muted">{a.artistName}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {result.external.albums.map((a) => (
+                <button
+                  key={a.catalogId}
+                  className="ext-row"
+                  onClick={() => openAlbumPreview(a)}
+                  style={{ width: '100%', textAlign: 'left' }}
+                >
                   {a.coverUrl && <img src={a.coverUrl} alt="" />}
-                  <div>{a.title}</div>
-                  <div className="muted">{a.artistName}</div>
+                  <div className="info">
+                    <div>{a.title}</div>
+                    <div className="muted">{a.artistName} · álbum</div>
+                  </div>
+                </button>
+              ))}
+            </>
+          ) : (
+            <p className="muted">Nenhum álbum encontrado.</p>
+          )}
+
+          <h2>Playlists</h2>
+          {(result.local.playlists ?? []).length > 0 ? (
+            <div className="cards">
+              {(result.local.playlists ?? []).map((p) => (
+                <button key={p.id} className="card" onClick={() => go({ kind: 'playlist', id: p.id })}>
+                  <div className="card-placeholder">🎵</div>
+                  <div>{p.name}</div>
+                  <div className="muted">{p.trackCount} faixas</div>
                 </button>
               ))}
             </div>
-          )}
-          {result.local.tracks.length > 0 ? (
-            <TrackList tracks={result.local.tracks} showAlbum />
           ) : (
-            <p className="muted">Nenhuma faixa disponível localmente.</p>
+            <p className="muted">Nenhuma playlist encontrada.</p>
           )}
 
-          <h2>Catálogo</h2>
-          {result.external.albums.map((a) => (
-            <button
-              key={a.deezerId}
-              className="ext-row"
-              onClick={() => openAlbumPreview(a)}
-              style={{ width: '100%', textAlign: 'left' }}
-            >
-              {a.coverUrl && <img src={a.coverUrl} alt="" />}
-              <div className="info">
-                <div>{a.title}</div>
-                <div className="muted">{a.artistName} · álbum</div>
-              </div>
-              <span className="muted">Ver álbum</span>
-            </button>
-          ))}
+          <h2>Músicas</h2>
+          {result.local.tracks.length > 0 && <TrackList tracks={result.local.tracks} showAlbum />}
           {result.external.tracks.map((t) => (
-            <div key={t.deezerId} className="ext-row">
+            <div key={t.catalogId} className="ext-row">
               {t.coverUrl && <img src={t.coverUrl} alt="" />}
               <div className="info">
                 <div>{t.title}</div>
@@ -165,17 +196,31 @@ export function SearchView() {
                   {t.artistName} · {t.albumTitle}
                 </div>
               </div>
-              <button disabled={imported.has(t.deezerId)} onClick={() => importTrack(t)}>
-                {imported.has(t.deezerId) ? 'Importada' : 'Importar'}
+              <button disabled={imported.has(t.catalogId)} onClick={() => importTrack(t)}>
+                {imported.has(t.catalogId) ? 'Importada' : 'Importar'}
               </button>
             </div>
           ))}
+          {result.local.tracks.length === 0 && result.external.tracks.length === 0 && (
+            <p className="muted">Nenhuma música encontrada.</p>
+          )}
+
           {result.external.artists.length > 0 && (
-            <div className="chips">
-              {result.external.artists.map((a) => (
-                <span key={a.deezerId}>{a.name}</span>
-              ))}
-            </div>
+            <>
+              <h2>Artistas</h2>
+              <div className="chips">
+                {result.external.artists.map((a) => (
+                  <button
+                    key={a.catalogId}
+                    className="badge"
+                    onClick={() => doSearch(a.name)}
+                    title={`Buscar ${a.name}`}
+                  >
+                    {a.name}
+                  </button>
+                ))}
+              </div>
+            </>
           )}
         </>
       )}

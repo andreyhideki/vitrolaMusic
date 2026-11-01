@@ -11,6 +11,7 @@ frontend/data/
 # Build
 api/dist/
 frontend/dist/
+frontend/dev-dist/
 
 # Ambiente
 .env

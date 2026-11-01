@@ -41,14 +41,15 @@ export interface LibraryResponse {
 
 export interface AlbumPreviewResponse {
   album: AlbumDto;
-  tracks: (TrackDto & { deezerId: string; localTrackId: number | null })[];
-  deezerId: string;
+  tracks: (TrackDto & { catalogId: string; localTrackId: number | null })[];
+  catalogId: string;
 }
 
 export interface AppSettings {
   audioQuality: 'low' | 'medium' | 'high';
   mediaDir: string;
   streamWithoutDownload: boolean;
+  cleanupUnusedAfterDays: number;
 }
 
 export interface ArtistDto {
@@ -72,7 +73,7 @@ export interface PlaylistDetail {
 }
 
 export interface ExternalTrack {
-  deezerId: string;
+  catalogId: string;
   title: string;
   artistName: string;
   albumTitle: string;
@@ -81,20 +82,33 @@ export interface ExternalTrack {
 }
 
 export interface ExternalAlbum {
-  deezerId: string;
+  catalogId: string;
   title: string;
   artistName: string;
   coverUrl: string | null;
 }
 
 export interface SearchResponse {
-  local: { tracks: TrackDto[]; albums: AlbumDto[]; artists: ArtistDto[] };
+  local: { tracks: TrackDto[]; albums: AlbumDto[]; artists: ArtistDto[]; playlists: PlaylistSummary[] };
   external: {
     tracks: ExternalTrack[];
     albums: ExternalAlbum[];
-    artists: { deezerId: string; name: string; imageUrl: string | null }[];
+    artists: { catalogId: string; name: string; imageUrl: string | null }[];
   };
   warning?: string;
+}
+
+export type AnalyticsPeriod = 'day' | 'week' | 'month' | 'year';
+
+export interface AnalyticsResponse {
+  totalPlays: number;
+  totalSkipped: number;
+  totalSeconds: number;
+  topTracks: { trackTitle: string; artistName: string | null; plays: number; seconds: number }[];
+  topArtists: { name: string | null; plays: number; seconds: number }[];
+  topAlbums: { albumTitle: string | null; artistName: string | null; plays: number; seconds: number }[];
+  topGenres: { name: string | null; plays: number; seconds: number }[];
+  timeline: { bucket: string; plays: number; seconds: number; skipped: number }[];
 }
 
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {

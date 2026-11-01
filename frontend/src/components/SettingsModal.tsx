@@ -12,8 +12,18 @@ const QUALITY_OPTIONS: { value: AppSettings['audioQuality']; label: string }[] =
   { value: 'high', label: 'Alta' },
 ];
 
+const CLEANUP_OPTIONS: { value: number; label: string }[] = [
+  { value: 0, label: 'Não limpar' },
+  { value: 180, label: '180 dias' },
+];
+
 export function SettingsModal({ open, onClose }: Props) {
-  const [settings, setSettings] = useState<AppSettings>({ audioQuality: 'medium', mediaDir: '', streamWithoutDownload: false });
+  const [settings, setSettings] = useState<AppSettings>({
+    audioQuality: 'medium',
+    mediaDir: '',
+    streamWithoutDownload: false,
+    cleanupUnusedAfterDays: 0,
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
@@ -84,9 +94,26 @@ export function SettingsModal({ open, onClose }: Props) {
                 checked={settings.streamWithoutDownload}
                 onChange={(e) => setSettings({ ...settings, streamWithoutDownload: e.target.checked })}
               />
-              <span>Tocar via streaming do YouTube sem baixar</span>
+              <span>Tocar via streaming externo sem baixar</span>
             </label>
-            <p className="hint">Quando ativo, o player toca diretamente do YouTube se o arquivo ainda não estiver baixado.</p>
+            <p className="hint">Quando ativo, o player toca diretamente da fonte externa se o arquivo ainda não estiver baixado.</p>
+          </div>
+
+          <div className="form-group">
+            <label>Limpar faixas não tocadas após</label>
+            <select
+              value={settings.cleanupUnusedAfterDays}
+              onChange={(e) =>
+                setSettings({ ...settings, cleanupUnusedAfterDays: Number(e.target.value) })
+              }
+            >
+              {CLEANUP_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <p className="hint">Faixas baixadas que não forem reproduzidas nesse prazo serão removidas automaticamente.</p>
           </div>
 
           <div className="form-group">

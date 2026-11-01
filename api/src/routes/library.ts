@@ -1,10 +1,15 @@
 import { Router } from 'express';
 import * as repo from '../repo.js';
+import { mediaUsage } from '../services/cleanup.js';
 
 export const libraryRouter = Router();
 
 libraryRouter.get('/genres', (_req, res) => {
   res.json(repo.getGenres());
+});
+
+libraryRouter.get('/usage', (_req, res) => {
+  res.json(mediaUsage());
 });
 
 libraryRouter.get('/', (req, res) => {

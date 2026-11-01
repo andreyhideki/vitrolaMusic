@@ -18,6 +18,10 @@ if (!hasColumn('tracks', 'bitrate_kbps')) {
   db.exec(`ALTER TABLE tracks ADD COLUMN bitrate_kbps INTEGER`);
 }
 
+if (!hasColumn('tracks', 'last_played_at')) {
+  db.exec(`ALTER TABLE tracks ADD COLUMN last_played_at TEXT`);
+}
+
 db.exec(`
 CREATE TABLE IF NOT EXISTS artists (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -74,8 +78,31 @@ CREATE TABLE IF NOT EXISTS playlist_entries (
 
 CREATE INDEX IF NOT EXISTS idx_entries_playlist ON playlist_entries(playlist_id, position);
 
+CREATE TABLE IF NOT EXISTS plays (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  track_id INTEGER REFERENCES tracks(id) ON DELETE SET NULL,
+  track_title TEXT NOT NULL,
+  artist_name TEXT,
+  album_title TEXT,
+  genre_name TEXT,
+  played_seconds INTEGER NOT NULL DEFAULT 0,
+  duration_seconds INTEGER,
+  skipped INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_plays_created_at ON plays(created_at);
+
 CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
 `);
+
+// Migra prefixos de catálogo usados por versões anteriores.
+const LEGACY_CATALOG_PREFIX = 'deezer:';
+for (const table of ['artists', 'albums', 'tracks']) {
+  db.prepare(
+    `UPDATE OR IGNORE ${table} SET ext_id = 'catalog:' || substr(ext_id, ?) WHERE ext_id LIKE ?`,
+  ).run(LEGACY_CATALOG_PREFIX.length + 1, `${LEGACY_CATALOG_PREFIX}%`);
+}

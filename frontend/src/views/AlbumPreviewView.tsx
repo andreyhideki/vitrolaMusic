@@ -10,7 +10,7 @@ interface ProgressInfo {
   status: TrackDto['downloadStatus'];
 }
 
-export function AlbumPreviewView({ deezerId }: { deezerId: string }) {
+export function AlbumPreviewView({ catalogId }: { catalogId: string }) {
   const [data, setData] = useState<AlbumPreviewResponse | null>(null);
   const [error, setError] = useState('');
   const [importingAlbum, setImportingAlbum] = useState(false);
@@ -23,7 +23,7 @@ export function AlbumPreviewView({ deezerId }: { deezerId: string }) {
 
   async function load() {
     try {
-      const d = await api<AlbumPreviewResponse>(`/preview/album?deezerId=${deezerId}`);
+      const d = await api<AlbumPreviewResponse>(`/preview/album?catalogId=${catalogId}`);
       useLibrary.getState().upsert(d.tracks.filter((t) => t.localTrackId !== null));
       setData(d);
       setError('');
@@ -46,7 +46,7 @@ export function AlbumPreviewView({ deezerId }: { deezerId: string }) {
       startedRef.current.clear();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deezerId]);
+  }, [catalogId]);
 
   useEffect(() => {
     if (!data) return;
@@ -100,7 +100,7 @@ export function AlbumPreviewView({ deezerId }: { deezerId: string }) {
     if (!data || importingAlbum) return;
     setImportingAlbum(true);
     try {
-      const { albumId } = await send<{ albumId: number }>('POST', '/import/album', { deezerId: data.deezerId });
+      const { albumId } = await send<{ albumId: number }>('POST', '/import/album', { catalogId: data.catalogId });
       go({ kind: 'album', id: albumId });
     } catch (e) {
       setError(errorMessage(e));
@@ -108,9 +108,9 @@ export function AlbumPreviewView({ deezerId }: { deezerId: string }) {
     }
   }
 
-  async function importTrack(trackDeezerId: string) {
+  async function importTrack(trackCatalogId: string) {
     try {
-      const { track } = await send<{ track: TrackDto }>('POST', '/import/track', { deezerId: trackDeezerId });
+      const { track } = await send<{ track: TrackDto }>('POST', '/import/track', { catalogId: trackCatalogId });
       useLibrary.getState().upsert([track]);
       setImportedTrackIds((prev) => new Set(prev).add(track.id));
       setData((prev) => {
@@ -118,7 +118,7 @@ export function AlbumPreviewView({ deezerId }: { deezerId: string }) {
         return {
           ...prev,
           tracks: prev.tracks.map((t) =>
-            t.deezerId === trackDeezerId ? { ...t, localTrackId: track.id, downloadStatus: track.downloadStatus } : t,
+            t.catalogId === trackCatalogId ? { ...t, localTrackId: track.id, downloadStatus: track.downloadStatus } : t,
           ),
         };
       });
@@ -169,7 +169,7 @@ export function AlbumPreviewView({ deezerId }: { deezerId: string }) {
           const imported = localId !== null && importedTrackIds.has(localId);
 
           return (
-            <li key={t.deezerId} className={`track ${ready ? '' : 'unavailable'}`}>
+            <li key={t.catalogId} className={`track ${ready ? '' : 'unavailable'}`}>
               <button
                 className="play-btn"
                 disabled={!ready}
@@ -200,7 +200,7 @@ export function AlbumPreviewView({ deezerId }: { deezerId: string }) {
               <span className="muted">{fmtDuration(t.durationSeconds)}</span>
               <button
                 disabled={ready || imported}
-                onClick={() => importTrack(t.deezerId)}
+                onClick={() => importTrack(t.catalogId)}
               >
                 {ready ? 'Baixada' : imported ? 'Importando…' : 'Importar'}
               </button>

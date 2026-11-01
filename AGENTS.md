@@ -15,8 +15,8 @@
 - Monorepo simples:
   - `api/` — Express 5 + TypeScript (`tsx watch`), SQLite via `better-sqlite3`.
   - `frontend/` — React 18 + Vite + TypeScript + Zustand.
-- O Vite no container faz proxy de `/api` para o serviço `api` do Compose (`API_TARGET`). Localmente (fora do Docker) o padrão é `http://localhost:3001`.
-- A API escuta em `0.0.0.0:3001` no container; o frontend em `0.0.0.0:5173`.
+- O Vite no container faz proxy de `/api` para o serviço `api` do Compose (`API_TARGET`). Localmente (fora do Docker) o padrão é `http://localhost:5172`.
+- A API escuta em `0.0.0.0:5172` no container; o frontend em `0.0.0.0:5173`.
 
 ## Dados e persistência
 
@@ -28,8 +28,12 @@
 
 ## Downloads e fontes de áudio
 
-- O downloader (`api/src/services/downloader.ts`) tenta primeiro arquivo local em `IMPORT_DIR`, depois busca no YouTube via `yt-dlp`.
-- O container da API já inclui `ffmpeg`, `python3` e `yt-dlp`. Não é necessário instalar no host quando usa Docker.
+- O downloader (`api/src/services/downloader.ts`) tenta primeiro arquivo local em `IMPORT_DIR`, depois busca a faixa em uma fonte externa via `externalProvider` (`api/src/services/external.ts`).
+- O container da API já inclui `ffmpeg`, `python3` e a ferramenta de download. Não é necessário instalar no host quando usa Docker.
+- Metadados externos vêm de `api/src/services/catalogApi.ts`. Identificadores externos usam o prefixo `catalog:`; a migração em `api/src/db.ts` converte prefixos legados ao iniciar.
+- A tabela `tracks` possui a coluna `last_played_at`. O endpoint `POST /api/tracks/:id/played` registra a reprodução; o player chama esse endpoint ao iniciar uma faixa.
+- A tela inicial mostra o espaço usado pelas músicas baixadas via `GET /api/library/usage`.
+- A configuração `cleanupUnusedAfterDays` (0 = desativado) define em quantos dias faixas baixadas e não tocadas são removidas automaticamente pelo scheduler (`api/src/services/cleanup.ts`); o valor de 180 dias está disponível na UI.
 - Nome final dos arquivos: `Artista - Álbum - Título.mp3`.
 - Status de download (`pending` | `downloading` | `ready` | `failed`) fica na tabela `tracks`. O endpoint `GET /api/albums/:id` normaliza o status pela existência real do arquivo no disco: se o arquivo existe, é `ready`; se não existe, nunca é `ready`.
 
@@ -62,9 +66,13 @@
 
 ## Estado atual / Features implementadas
 
-- Busca unificada (biblioteca local + catálogo externo do Deezer).
-- Importação de faixas e álbuns do Deezer, com enfileiramento automático de downloads.
-- Player com fila, shuffle, repeat, "tocar a seguir", "adicionar à fila", Media Session e pré-carregamento da próxima faixa.
+- Busca unificada (biblioteca local + catálogo externo), com resultados ordenados em Álbuns, Playlists (locais) e Músicas; campo de busca sticky, botão de limpar e artistas clicáveis.
+- Menu "Paranoic" (frontend/src/views/AnalyticsView.tsx) com estatísticas de reprodução: totalizadores, ranking por música/artista/álbum/gênero e gráficos por dia/semana/mês/ano.
+- Página inicial (`frontend/src/views/LibraryView.tsx`, menu "Início") em estilo dashboard: saudação, contagem de álbuns/faixas/playlists, espaço usado em disco e ações "Tocar tudo" / "Aleatório".
+- Carrossel de álbuns na home (`frontend/src/components/AlbumCarousel.tsx`): arrastável, com setas < > ao lado do título que rolam de 1 a 3 álbuns por clique.
+- Capas de álbum na página inicial têm botão de play em destaque (borda verde) que toca o álbum; vira pause (borda vermelha) quando o álbum está sendo reproduzido.
+- Importação de faixas e álbuns do catálogo externo, com enfileiramento automático de downloads.
+- Player com fila, shuffle, repeat, "tocar a seguir", "adicionar à fila", Media Session, pré-carregamento da próxima faixa e persistência de volume entre faixas.
 - Playlists: criar, editar, excluir, adicionar/remover/reordenar faixas, buscar músicas na biblioteca para adicionar e sugestões por gênero (até 10 faixas).
 - Tela de álbum (`frontend/src/views/AlbumView.tsx`) mostrando faixas baixadas e não baixadas, com botão "Importar" e barra de progresso do download.
 - Pré-visualização de álbum (`frontend/src/views/AlbumPreviewView.tsx`) com importação individual, importação do álbum inteiro e barra de progresso do download.
@@ -73,6 +81,7 @@
 - Endpoint `GET /api/tracks/:id/progress` retorna percentual e status do download, também verificando a existência real do arquivo no disco.
 - Normalização de status no endpoint de álbum pela existência real do arquivo em disco.
 - Modal de confirmação customizado (`frontend/src/components/ConfirmModal.tsx`) para exclusão de álbuns, faixas e playlists, substituindo o `confirm` nativo do navegador.
+- PWA — Fase 1 (instalável): manifest, ícones PWA (`frontend/public/pwa-*.png`, `apple-touch-icon.png`), meta tags mobile, safe areas e Service Worker gerado pelo `vite-plugin-pwa` com prompt de atualização (`frontend/src/components/PwaReloadPrompt.tsx`).
 
 ### Em andamento / desenvolvimento
 
@@ -85,3 +94,4 @@
 - Valide alterações de tipo com `make typecheck` antes de considerar a tarefa pronta.
 - Não confie cegamente em `download_status = 'ready'`: verifique a existência do arquivo no disco quando o status afetar a UI.
 - Mantenha este `AGENTS.md` atualizado conforme novas features, regras ou gotchas forem descobertos.
+- O Service Worker do PWA está habilitado também em desenvolvimento (`devOptions.enabled: true`). Se comportamentos estranhos de cache atrapalharem o hot reload, desabilite temporariamente no `vite.config.ts` ou use uma aba anônima.

@@ -1,10 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api, AlbumDto, errorMessage, GenreDto, LibraryResponse, PlaylistSummary, send, TrackDto } from '../api';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { useLibrary } from '../library';
 import { useNav } from '../nav';
 import { playerControls } from '../player/usePlayerAudio';
+import { usePlayerStore } from '../player/store';
+import { usePlayback } from '../player/playback';
 import { TrackList } from '../components/TrackList';
+import { AlbumCarousel } from '../components/AlbumCarousel';
+import { fmtBytes } from '../format';
 
 interface LibraryState {
   genre: number | '';
@@ -16,22 +20,29 @@ export function LibraryView() {
   const [library, setLibrary] = useState<LibraryResponse | null>(null);
   const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
   const [genres, setGenres] = useState<GenreDto[]>([]);
+  const [usage, setUsage] = useState<{ bytes: number; trackCount: number } | null>(null);
   const [genre, setGenre] = useState<number | ''>(saved?.genre ?? '');
   const [error, setError] = useState('');
   const [confirm, setConfirm] = useState<{ open: boolean; title: string; message: string; onConfirm: () => void } | null>(null);
   const go = useNav((s) => s.go);
+  const currentTrackId = usePlayerStore((s) => s.currentTrackId);
+  const playing = usePlayback((s) => s.playing);
+  const byId = useLibrary((s) => s.byId);
+  const currentAlbumId = currentTrackId ? byId[currentTrackId]?.albumId : undefined;
 
   async function load() {
     try {
-      const [lib, plist, glist] = await Promise.all([
+      const [lib, plist, glist, u] = await Promise.all([
         api<LibraryResponse>(genre === '' ? '/library' : `/library?genre=${genre}`),
         api<PlaylistSummary[]>('/playlists'),
         api<GenreDto[]>('/library/genres'),
+        api<{ bytes: number; trackCount: number }>('/library/usage'),
       ]);
       useLibrary.getState().upsert(lib.tracks);
       setLibrary(lib);
       setPlaylists(plist);
       setGenres(glist);
+      setUsage(u);
       setError('');
     } catch (err) {
       setError(errorMessage(err));
@@ -76,6 +87,23 @@ export function LibraryView() {
 
   const [pendingTrack, setPendingTrack] = useState<TrackDto | null>(null);
 
+  const readyTrackIds = (library?.tracks ?? [])
+    .filter((t) => t.downloadStatus === 'ready')
+    .map((t) => String(t.id));
+
+  function albumTrackIds(albumId: number): string[] {
+    return (library?.tracks ?? [])
+      .filter((t) => t.albumId === albumId && t.downloadStatus === 'ready')
+      .map((t) => String(t.id));
+  }
+
+  function greeting(): string {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Bom dia';
+    if (hour < 18) return 'Boa tarde';
+    return 'Boa noite';
+  }
+
   function askDeleteTrack(trackId: number) {
     const t = library?.tracks.find((x) => x.id === trackId) ?? null;
     if (!t) return;
@@ -94,7 +122,40 @@ export function LibraryView() {
 
   return (
     <section>
-      <h1>Biblioteca</h1>
+      <div className="home-hero">
+        <div>
+          <div className="muted">Início</div>
+          <h1>{greeting()}</h1>
+          <p className="muted">
+            {library
+              ? `${library.albums.length} álbuns · ${library.tracks.length} faixas${
+                  playlists.length > 0 ? ` · ${playlists.length} playlists` : ''
+                }`
+              : 'Carregando…'}
+            {usage && (
+              <>
+                <br />
+                {fmtBytes(usage.bytes)} usados ({usage.trackCount} faixas baixadas)
+              </>
+            )}
+          </p>
+        </div>
+        <div className="actions">
+          <button
+            className="primary"
+            disabled={readyTrackIds.length === 0}
+            onClick={() => playerControls.playPlaylist(readyTrackIds, false)}
+          >
+            Tocar tudo
+          </button>
+          <button
+            disabled={readyTrackIds.length === 0}
+            onClick={() => playerControls.playPlaylist(readyTrackIds, true)}
+          >
+            Aleatório
+          </button>
+        </div>
+      </div>
 
       {error && <p className="error">{error}</p>}
 
@@ -129,28 +190,13 @@ export function LibraryView() {
         </div>
       )}
 
-      <h2>Álbuns</h2>
-      {library && library.albums.length === 0 ? (
-        <p className="muted">Nenhum álbum baixado ainda.</p>
-      ) : (
-        <div className="cards">
-          {library?.albums.map((a) => (
-            <div key={a.id} className="card">
-              <button className="card-content" onClick={() => go({ kind: 'album', id: a.id })}>
-                {a.coverUrl ? <img src={a.coverUrl} alt="" /> : <div className="card-placeholder">💿</div>}
-                <div>{a.title}</div>
-                <div className="muted">{a.artistName}</div>
-              </button>
-              <button
-                className="danger small"
-                onClick={() => askDeleteAlbum(a)}
-              >
-                Excluir
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
+      <AlbumCarousel
+        albums={library?.albums ?? []}
+        albumTrackIds={albumTrackIds}
+        currentAlbumId={currentAlbumId}
+        playing={playing}
+        onOpen={(id) => go({ kind: 'album', id })}
+      />
 
       <h2>Faixas</h2>
       {library && library.tracks.length === 0 ? (

@@ -5,7 +5,7 @@ import path from 'node:path';
 import * as repo from '../repo.js';
 import { enqueueDownload } from '../services/downloader.js';
 import { getEffectiveMediaDir } from '../settings.js';
-import { getStreamUrl, downloadProgress } from '../services/ytdlp.js';
+import { getStreamUrl, downloadProgress } from '../services/external.js';
 import { HttpError, parseId } from '../http.js';
 
 export const tracksRouter = Router();
@@ -29,6 +29,13 @@ tracksRouter.get('/:id', (req, res) => {
   const track = repo.getTrack(parseId(req.params.id));
   if (!track) throw new HttpError(404, 'Faixa não encontrada');
   res.json(track);
+});
+
+tracksRouter.post('/:id/played', (req, res) => {
+  const id = parseId(req.params.id);
+  if (!repo.getTrack(id)) throw new HttpError(404, 'Faixa não encontrada');
+  repo.updateLastPlayed(id);
+  res.status(204).end();
 });
 
 tracksRouter.post('/:id/download', (req, res) => {
@@ -78,7 +85,7 @@ tracksRouter.get('/:id/stream-url', async (req, res) => {
   const track = repo.getTrack(id);
   if (!track) throw new HttpError(404, 'Faixa não encontrada');
   const url = await getStreamUrl({ id, title: track.title, artistName: track.artistName });
-  if (!url) throw new HttpError(502, 'Não foi possível obter o stream do YouTube');
+  if (!url) throw new HttpError(502, 'Não foi possível obter o stream da fonte externa');
 
   try {
     const upstream = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
@@ -97,7 +104,7 @@ tracksRouter.get('/:id/stream-url', async (req, res) => {
     };
     pump().catch(() => res.destroy());
   } catch {
-    throw new HttpError(502, 'Não foi possível reproduzir o stream do YouTube');
+    throw new HttpError(502, 'Não foi possível reproduzir o stream da fonte externa');
   }
 });
 

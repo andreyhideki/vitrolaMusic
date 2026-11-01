@@ -4,7 +4,7 @@ import path from 'node:path';
 const dataDir = path.resolve(process.env.DATA_DIR ?? './data');
 
 export const config = {
-  port: Number(process.env.PORT ?? 3001),
+  port: Number(process.env.PORT ?? 5172),
   dataDir,
   mediaDir: path.join(dataDir, 'media'),
   importDir: path.resolve(process.env.IMPORT_DIR ?? path.join(dataDir, 'import')),

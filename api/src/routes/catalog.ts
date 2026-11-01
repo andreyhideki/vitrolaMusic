@@ -2,7 +2,7 @@ import { Router } from 'express';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import * as repo from '../repo.js';
-import { deezer } from '../services/deezer.js';
+import { catalogApi } from '../services/catalogApi.js';
 import { getEffectiveMediaDir } from '../settings.js';
 import { HttpError, parseId } from '../http.js';
 
@@ -35,18 +35,18 @@ catalogRouter.get('/albums/:id', async (req, res) => {
 
   const localTracks = repo.albumTracks(id);
   const extId = repo.getAlbumExtId(id);
-  const deezerAlbumId = extId?.replace('deezer:album:', '');
+  const catalogAlbumId = extId?.replace('catalog:album:', '');
 
-  if (!deezerAlbumId) {
+  if (!catalogAlbumId) {
     const tracks = await Promise.all(localTracks.map(normalizeLocalTrack));
     res.json({ album, tracks });
     return;
   }
 
   try {
-    const remote = await deezer.album(deezerAlbumId);
+    const remote = await catalogApi.album(catalogAlbumId);
     const remoteTracks = await Promise.all((remote?.tracks?.data ?? []).map(async (t: any, i: number) => {
-      const trackExtId = `deezer:track:${t.id}`;
+      const trackExtId = `catalog:track:${t.id}`;
       const local = repo.getTrackByExtId(trackExtId);
       if (local) return normalizeLocalTrack(local);
       return {
@@ -65,7 +65,7 @@ catalogRouter.get('/albums/:id', async (req, res) => {
         genreId: album.genreId,
         genreName: album.genreName,
         bitrateKbps: null,
-        deezerId: String(t.id),
+        catalogId: String(t.id),
       };
     }));
     res.json({ album, tracks: remoteTracks });

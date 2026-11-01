@@ -4,7 +4,7 @@ import { useUi } from '../ui';
 import { SettingsModal } from './SettingsModal';
 
 const MENU = [
-  { kind: 'library' as const, label: 'Biblioteca', icon: '🎶' },
+  { kind: 'library' as const, label: 'Início', icon: '🏠' },
   { kind: 'search' as const, label: 'Buscar', icon: '🔍' },
   { kind: 'playlists' as const, label: 'Playlists', icon: '🎵' },
 ];
@@ -39,9 +39,7 @@ export function Sidebar() {
           <button
             key={item.kind}
             className={
-              (item.kind === 'library' && view.kind === 'library') ||
-              (item.kind === 'search' && view.kind === 'search') ||
-              (item.kind === 'playlists' && inPlaylists)
+              (item.kind === 'playlists' && inPlaylists) || view.kind === item.kind
                 ? 'active'
                 : ''
             }
@@ -54,6 +52,14 @@ export function Sidebar() {
         ))}
       </nav>
       <div className="sidebar-footer" style={{ marginTop: 'auto' }}>
+        <button
+          className={view.kind === 'analytics' ? 'active' : ''}
+          onClick={() => go({ kind: 'analytics' })}
+          title="Paranoic"
+        >
+          <span className="menu-icon">📊</span>
+          {!collapsed && <span className="menu-label">Paranoic</span>}
+        </button>
         <button onClick={() => setSettingsOpen(true)} title="Configurações">
           <span className="menu-icon">⚙</span>
           {!collapsed && <span className="menu-label">Configurações</span>}

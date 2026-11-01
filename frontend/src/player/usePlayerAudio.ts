@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { send } from '../api';
 import { usePlayerStore } from './store';
 import { usePlayback } from './playback';
 import * as Q from './queue';
@@ -27,6 +28,8 @@ const defaultStreamUrl = (id: string) => `/api/tracks/${id}/stream`;
 let config: PlayerAudioConfig = { isReady: () => true };
 let audio: HTMLAudioElement | null = null;
 let preloader: HTMLAudioElement | null = null;
+let masterVolume = 1;
+let masterMuted = false;
 
 const store = usePlayerStore;
 
@@ -55,12 +58,33 @@ function updateMediaSession(id: string) {
   });
 }
 
+let endedNaturally = false;
+
+async function recordPlay(skipped: boolean) {
+  const id = store.getState().currentTrackId;
+  if (!id) return;
+  const el = getAudio();
+  const playedSeconds = Math.floor(el.currentTime || 0);
+  const durationSeconds = Number.isFinite(el.duration) ? Math.floor(el.duration) : null;
+  send('POST', '/plays', {
+    trackId: Number(id),
+    playedSeconds,
+    durationSeconds,
+    skipped,
+  }).catch(() => {});
+}
+
 async function loadTrack(id: string, autoplay: boolean) {
+  endedNaturally = false;
   const el = getAudio();
   try {
     el.src = await urlFor(id);
+    el.volume = masterMuted ? 0 : masterVolume;
     updateMediaSession(id);
-    if (autoplay) el.play().catch(() => {});
+    if (autoplay) {
+      el.play().catch(() => {});
+      send('POST', `/tracks/${id}/played`).catch(() => {});
+    }
   } catch {
     playerControls.next();
   }
@@ -88,6 +112,11 @@ async function preloadNext() {
  * que ainda não estão prontas. Só o resultado final entra no store.
  */
 async function go(from: Q.QueueState, advance: Advance): Promise<string | null> {
+  if (!endedNaturally) {
+    void recordPlay(true);
+  }
+  endedNaturally = false;
+
   let step = advance(from);
 
   for (
@@ -159,6 +188,8 @@ export const playerControls = {
   },
 
   setVolume(volume: number): void {
+    masterVolume = volume;
+    masterMuted = volume === 0;
     getAudio().volume = volume;
   },
 
@@ -204,6 +235,8 @@ export function usePlayerAudio(cfg: PlayerAudioConfig) {
       if (el.getAttribute('src')) playerControls.next();
     };
     const onEnded = () => {
+      void recordPlay(false);
+      endedNaturally = true;
       void playerControls.ended();
     };
 

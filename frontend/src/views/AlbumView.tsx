@@ -8,7 +8,7 @@ import { fmtBitrate, fmtDuration, STATUS_LABEL } from '../format';
 
 interface AlbumResponse {
   album: AlbumDto;
-  tracks: (TrackDto & { deezerId?: string })[];
+  tracks: (TrackDto & { catalogId?: string })[];
 }
 
 interface ProgressInfo {
@@ -140,17 +140,17 @@ export function AlbumView({ id }: { id: number }) {
     });
   }
 
-  async function importTrack(deezerId: string) {
-    setImportingTracks((prev) => new Set(prev).add(deezerId));
+  async function importTrack(catalogId: string) {
+    setImportingTracks((prev) => new Set(prev).add(catalogId));
     try {
-      const { track } = await send<{ track: TrackDto }>('POST', '/import/track', { deezerId });
+      const { track } = await send<{ track: TrackDto }>('POST', '/import/track', { catalogId });
       // Atualiza a lista localmente enquanto o load() busca dados frescos.
       setData((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
           tracks: prev.tracks.map((t) =>
-            t.deezerId === deezerId ? { ...track, deezerId } : t,
+            t.catalogId === catalogId ? { ...track, catalogId } : t,
           ),
         };
       });
@@ -161,7 +161,7 @@ export function AlbumView({ id }: { id: number }) {
     } finally {
       setImportingTracks((prev) => {
         const next = new Set(prev);
-        next.delete(deezerId);
+        next.delete(catalogId);
         return next;
       });
     }
@@ -195,7 +195,7 @@ export function AlbumView({ id }: { id: number }) {
       <ol className="tracks">
         {tracks.map((t, i) => {
           const isLocal = t.id > 0;
-          const isRemote = t.id === 0 && t.deezerId;
+          const isRemote = t.id === 0 && t.catalogId;
           const progress = isLocal ? progressMap[t.id] : undefined;
           const effectiveStatus = progress?.status ?? t.downloadStatus;
           const ready = isLocal && effectiveStatus === 'ready';
@@ -237,10 +237,10 @@ export function AlbumView({ id }: { id: number }) {
                 <button className="danger" onClick={() => askDeleteTrack(t.id)}>Excluir</button>
               ) : isRemote ? (
                 <button
-                  disabled={importingTracks.has(t.deezerId!)}
-                  onClick={() => t.deezerId && importTrack(t.deezerId)}
+                  disabled={importingTracks.has(t.catalogId!)}
+                  onClick={() => t.catalogId && importTrack(t.catalogId)}
                 >
-                  {importingTracks.has(t.deezerId!) ? 'Importando…' : 'Importar'}
+                  {importingTracks.has(t.catalogId!) ? 'Importando…' : 'Importar'}
                 </button>
               ) : null}
             </li>
