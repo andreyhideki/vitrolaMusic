@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 // Em Docker, API_TARGET aponta para o serviço "api". Localmente, usa localhost.
-const apiTarget = process.env.API_TARGET ?? 'http://localhost:3001';
+const apiTarget = process.env.API_TARGET ?? 'http://localhost:5172';
 
 export default defineConfig({
   plugins: [

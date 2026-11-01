@@ -19,7 +19,7 @@ make up        # constrói as imagens e sobe API + frontend em segundo plano
 ```
 
 - Frontend: http://localhost:5173
-- API: http://localhost:3001/api/health
+- API: http://localhost:5172/api/health
 
 Os arquivos são montados por volume, então as alterações no código recarregam sozinhas. Os dados ficam em `./data` no host (banco, mídia e a pasta `./data/import`).
 
@@ -47,7 +47,7 @@ Requisitos: Node.js 20+, uma ferramenta de download de mídia e ffmpeg no PATH.
 # Instale também a ferramenta de download de mídia de sua preferência.
 
 make local-install                 # instala dependências de api/ e frontend/
-cd api && npm run dev              # http://localhost:3001
+cd api && npm run dev              # http://localhost:5172
 cd frontend && npm run dev         # http://localhost:5173
 ```
 
@@ -55,7 +55,7 @@ cd frontend && npm run dev         # http://localhost:5173
 
 | Variável | Padrão | Função |
 |---|---|---|
-| `PORT` | `3001` | Porta da API |
+| `PORT` | `5172` | Porta da API |
 | `DATA_DIR` | `./data` | Banco SQLite e pasta de mídia |
 | `IMPORT_DIR` | `./data/import` | Pasta onde você coloca os arquivos de áudio que possui |
 | `CORS_ORIGIN` | `http://localhost:5173` | Origem permitida no CORS |
@@ -107,6 +107,7 @@ cd frontend && npm run dev         # http://localhost:5173
 - "Tocar a seguir" e "Adicionar à fila" (fila avulsa com prioridade).
 - Pula faixas que ainda não foram baixadas e faixas com erro.
 - Pré-carregamento da próxima faixa e integração com Media Session (controles do sistema e tela de bloqueio).
+- Volume persistido durante a troca de faixas: o áudio não volta para o máximo ao iniciar outra música.
 - Registra cada reprodução (total ou parcial) e contabiliza pulos para estatísticas.
 - Player fixo na parte inferior, sempre visível mesmo com scroll longo.
 - Fila e configurações salvas em `localStorage`, para restaurar após recarregar a página.
@@ -117,7 +118,8 @@ cd frontend && npm run dev         # http://localhost:5173
 - **Sidebar colapsável:** menu lateral pode exibir apenas ícones e logo reduzido; estado persistido; scroll independente do conteúdo.
 - **Navegação voltar/avançar:** botões no topo permitem retornar e avançar entre telas, preservando filtros e resultados de busca.
 - **Home/dashboard:** saudação, contagem de álbuns/faixas/playlists, espaço usado em disco e ações rápidas "Tocar tudo" / "Aleatório".
-- **Capas de álbum com play:** botão verde de play em destaque nas capas para tocar o álbum direto da home.
+- **Carrossel de álbuns:** na home os álbuns ficam em um carrossel horizontal arrastável, com setas < > ao lado do título para navegar de 1 a 3 álbuns por clique.
+- **Capas de álbum com play:** botão verde de play em destaque nas capas para tocar o álbum direto da home; muda para pause vermelho quando o álbum está sendo reproduzido.
 - **Busca unificada:** resultados ordenados em Álbuns, Playlists (locais) e Músicas; campo de busca fixo ao rolar; botão de limpar texto dentro do input; artistas clicáveis para nova busca.
 - **Histórico de buscas:** as últimas 10 buscas ficam salvas e podem ser reexecutadas.
 - **Download com progresso:** telas de álbum e pré-visualização mostram barra de progresso ao importar faixas.

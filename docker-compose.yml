@@ -6,9 +6,9 @@ services:
     build: ./api
     image: vitrola-api:dev
     ports:
-      - "3001:3001"
+      - "5172:5172"
     environment:
-      PORT: 3001
+      PORT: 5172
       DATA_DIR: /app/data
       IMPORT_DIR: /app/data/import
       CORS_ORIGIN: http://localhost:5173
@@ -26,7 +26,7 @@ services:
       - "5173:5173"
     environment:
       # Destino do proxy /api do Vite, dentro da rede do compose
-      API_TARGET: http://api:3001
+      API_TARGET: http://api:5172
       # Necessário para hot reload em bind mounts (macOS e Windows)
       CHOKIDAR_USEPOLLING: "true"
     volumes:

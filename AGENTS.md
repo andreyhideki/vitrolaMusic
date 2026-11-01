@@ -15,8 +15,8 @@
 - Monorepo simples:
   - `api/` — Express 5 + TypeScript (`tsx watch`), SQLite via `better-sqlite3`.
   - `frontend/` — React 18 + Vite + TypeScript + Zustand.
-- O Vite no container faz proxy de `/api` para o serviço `api` do Compose (`API_TARGET`). Localmente (fora do Docker) o padrão é `http://localhost:3001`.
-- A API escuta em `0.0.0.0:3001` no container; o frontend em `0.0.0.0:5173`.
+- O Vite no container faz proxy de `/api` para o serviço `api` do Compose (`API_TARGET`). Localmente (fora do Docker) o padrão é `http://localhost:5172`.
+- A API escuta em `0.0.0.0:5172` no container; o frontend em `0.0.0.0:5173`.
 
 ## Dados e persistência
 
@@ -68,10 +68,11 @@
 
 - Busca unificada (biblioteca local + catálogo externo), com resultados ordenados em Álbuns, Playlists (locais) e Músicas; campo de busca sticky, botão de limpar e artistas clicáveis.
 - Menu "Paranoic" (frontend/src/views/AnalyticsView.tsx) com estatísticas de reprodução: totalizadores, ranking por música/artista/álbum/gênero e gráficos por dia/semana/mês/ano.
-- Página inicial (`frontend/src/views/LibraryView.tsx`, menu "Início") em estilo dashboard: saudação, contagem de álbuns/faixas/playlists e ações "Tocar tudo" / "Aleatório".
-- Capas de álbum na página inicial têm botão de play verde em destaque que toca o álbum inteiro sem abrir a tela do álbum.
+- Página inicial (`frontend/src/views/LibraryView.tsx`, menu "Início") em estilo dashboard: saudação, contagem de álbuns/faixas/playlists, espaço usado em disco e ações "Tocar tudo" / "Aleatório".
+- Carrossel de álbuns na home (`frontend/src/components/AlbumCarousel.tsx`): arrastável, com setas < > ao lado do título que rolam de 1 a 3 álbuns por clique.
+- Capas de álbum na página inicial têm botão de play em destaque (borda verde) que toca o álbum; vira pause (borda vermelha) quando o álbum está sendo reproduzido.
 - Importação de faixas e álbuns do catálogo externo, com enfileiramento automático de downloads.
-- Player com fila, shuffle, repeat, "tocar a seguir", "adicionar à fila", Media Session e pré-carregamento da próxima faixa.
+- Player com fila, shuffle, repeat, "tocar a seguir", "adicionar à fila", Media Session, pré-carregamento da próxima faixa e persistência de volume entre faixas.
 - Playlists: criar, editar, excluir, adicionar/remover/reordenar faixas, buscar músicas na biblioteca para adicionar e sugestões por gênero (até 10 faixas).
 - Tela de álbum (`frontend/src/views/AlbumView.tsx`) mostrando faixas baixadas e não baixadas, com botão "Importar" e barra de progresso do download.
 - Pré-visualização de álbum (`frontend/src/views/AlbumPreviewView.tsx`) com importação individual, importação do álbum inteiro e barra de progresso do download.
