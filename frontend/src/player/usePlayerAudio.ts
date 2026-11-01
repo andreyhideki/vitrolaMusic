@@ -28,6 +28,8 @@ const defaultStreamUrl = (id: string) => `/api/tracks/${id}/stream`;
 let config: PlayerAudioConfig = { isReady: () => true };
 let audio: HTMLAudioElement | null = null;
 let preloader: HTMLAudioElement | null = null;
+let masterVolume = 1;
+let masterMuted = false;
 
 const store = usePlayerStore;
 
@@ -77,6 +79,7 @@ async function loadTrack(id: string, autoplay: boolean) {
   const el = getAudio();
   try {
     el.src = await urlFor(id);
+    el.volume = masterMuted ? 0 : masterVolume;
     updateMediaSession(id);
     if (autoplay) {
       el.play().catch(() => {});
@@ -185,6 +188,8 @@ export const playerControls = {
   },
 
   setVolume(volume: number): void {
+    masterVolume = volume;
+    masterMuted = volume === 0;
     getAudio().volume = volume;
   },
 
