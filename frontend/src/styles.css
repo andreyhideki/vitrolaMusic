@@ -488,6 +488,51 @@ input, select {
 .card-cover-btn { display: block; width: 100%; padding: 0; border: none; background: none; cursor: pointer; color: inherit; }
 .card-cover img { display: block; margin-bottom: 0; }
 .card-cover .card-placeholder { margin-bottom: 0; }
+
+.album-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.album-section-header h2 { margin: 0; }
+.carousel-arrows { display: flex; gap: 8px; }
+.carousel-arrows button {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: none;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.carousel-arrows button:hover:not(:disabled) { border-color: var(--text); }
+.carousel-arrows button:disabled { opacity: 0.35; cursor: default; }
+
+.album-carousel {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+  cursor: grab;
+  padding: 4px;
+  margin-bottom: 24px;
+}
+.album-carousel::-webkit-scrollbar { display: none; }
+.album-carousel:active { cursor: grabbing; }
+.album-carousel .card {
+  flex: 0 0 auto;
+  width: 160px;
+  scroll-snap-align: start;
+  user-select: none;
+}
+
 .cover-play {
   position: absolute;
   right: 10px;

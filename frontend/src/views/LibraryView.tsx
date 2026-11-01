@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api, AlbumDto, errorMessage, GenreDto, LibraryResponse, PlaylistSummary, send, TrackDto } from '../api';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { useLibrary } from '../library';
@@ -7,6 +7,7 @@ import { playerControls } from '../player/usePlayerAudio';
 import { usePlayerStore } from '../player/store';
 import { usePlayback } from '../player/playback';
 import { TrackList } from '../components/TrackList';
+import { AlbumCarousel } from '../components/AlbumCarousel';
 import { fmtBytes } from '../format';
 
 interface LibraryState {
@@ -189,49 +190,13 @@ export function LibraryView() {
         </div>
       )}
 
-      <h2>Álbuns</h2>
-      {library && library.albums.length === 0 ? (
-        <p className="muted">Nenhum álbum baixado ainda.</p>
-      ) : (
-        <div className="cards">
-          {library?.albums.map((a) => {
-            const ids = albumTrackIds(a.id);
-            const isCurrentAlbum = currentAlbumId === a.id && playing;
-            return (
-              <div key={a.id} className="card album-card">
-                <div className="card-cover">
-                  <button
-                    className="card-cover-btn"
-                    onClick={() => go({ kind: 'album', id: a.id })}
-                    aria-label={`Abrir álbum ${a.title}`}
-                  >
-                    {a.coverUrl ? <img src={a.coverUrl} alt="" /> : <div className="card-placeholder">💿</div>}
-                  </button>
-                  <button
-                    className={`cover-play ${isCurrentAlbum ? 'is-pause' : 'is-play'}`}
-                    disabled={ids.length === 0}
-                    onClick={() => {
-                      if (isCurrentAlbum) {
-                        playerControls.togglePlay();
-                      } else {
-                        playerControls.playPlaylist(ids, false);
-                      }
-                    }}
-                    aria-label={isCurrentAlbum ? `Pausar álbum ${a.title}` : `Tocar álbum ${a.title}`}
-                    title={isCurrentAlbum ? 'Pausar álbum' : 'Tocar álbum'}
-                  >
-                    {isCurrentAlbum ? '❚❚' : '▶'}
-                  </button>
-                </div>
-                <button className="card-content" onClick={() => go({ kind: 'album', id: a.id })}>
-                  <div>{a.title}</div>
-                  <div className="muted">{a.artistName}</div>
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      <AlbumCarousel
+        albums={library?.albums ?? []}
+        albumTrackIds={albumTrackIds}
+        currentAlbumId={currentAlbumId}
+        playing={playing}
+        onOpen={(id) => go({ kind: 'album', id })}
+      />
 
       <h2>Faixas</h2>
       {library && library.tracks.length === 0 ? (
