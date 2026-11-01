@@ -69,7 +69,14 @@ cd frontend && npm run dev         # http://localhost:5173
    2. provedor externo: se não encontrar localmente, busca a faixa em uma fonte externa de áudio, converte para MP3 e salva em `data/media`.
 4. Quando a faixa fica `ready`, o player toca via `/api/tracks/:id/stream`, com suporte a HTTP `Range`.
 
-> **Aviso legal:** O download de áudio de fontes externas pode violar os Termos de Serviço da plataforma e/ou direitos autorais. Use essa funcionalidade apenas para conteúdo que você tem permissão de baixar e reproduzir. O projeto também continua suportando arquivos locais e músicas com licença livre.
+## ⚖️ Disclaimer / Isenção de Responsabilidade
+
+Este projeto foi desenvolvido estritamente para **fins educacionais e de estudo** sobre engenharia de software, requisições HTTP e manipulação de arquivos de áudio.
+
+* O objetivo aqui é explorar conceitos técnicos — como streaming, filas de download e gerenciamento de bibliotecas. **Não incentivo, facilito ou apoio o download de conteúdo protegido por direitos autorais sem permissão dos titulares**.
+* Se você usar a ferramenta para baixar mídia de plataformas terceiras, o faz por sua conta e risco. É sua responsabilidade respeitar os **Termos de Serviço** de cada plataforma e a **legislação de direitos autorais vigente no seu país**.
+* O autor e contribuidores **não se responsabilizam** por eventuais problemas — como penalidades legais, suspensão de contas, perda de dados ou danos — causados por um uso inadequado do software.
+* O uso recomendado é com **arquivos locais que você já possui**, conteúdo de **domínio público** ou mídia licenciada para uso pessoal.
 
 ## Estrutura da API
 

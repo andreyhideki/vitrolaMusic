@@ -8,6 +8,22 @@ data/
 api/data/
 frontend/data/
 
+# Arquivos de áudio
+*.mp3
+*.flac
+*.wav
+*.ogg
+*.m4a
+*.aac
+*.wma
+*.opus
+*.webm
+*.mp4
+*.m4v
+*.mkv
+*.avi
+*.mov
+
 # Build
 api/dist/
 frontend/dist/
