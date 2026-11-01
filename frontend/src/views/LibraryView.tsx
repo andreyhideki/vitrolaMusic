@@ -4,6 +4,8 @@ import { ConfirmModal } from '../components/ConfirmModal';
 import { useLibrary } from '../library';
 import { useNav } from '../nav';
 import { playerControls } from '../player/usePlayerAudio';
+import { usePlayerStore } from '../player/store';
+import { usePlayback } from '../player/playback';
 import { TrackList } from '../components/TrackList';
 import { fmtBytes } from '../format';
 
@@ -22,6 +24,10 @@ export function LibraryView() {
   const [error, setError] = useState('');
   const [confirm, setConfirm] = useState<{ open: boolean; title: string; message: string; onConfirm: () => void } | null>(null);
   const go = useNav((s) => s.go);
+  const currentTrackId = usePlayerStore((s) => s.currentTrackId);
+  const playing = usePlayback((s) => s.playing);
+  const byId = useLibrary((s) => s.byId);
+  const currentAlbumId = currentTrackId ? byId[currentTrackId]?.albumId : undefined;
 
   async function load() {
     try {
@@ -190,6 +196,7 @@ export function LibraryView() {
         <div className="cards">
           {library?.albums.map((a) => {
             const ids = albumTrackIds(a.id);
+            const isCurrentAlbum = currentAlbumId === a.id && playing;
             return (
               <div key={a.id} className="card album-card">
                 <div className="card-cover">
@@ -201,13 +208,19 @@ export function LibraryView() {
                     {a.coverUrl ? <img src={a.coverUrl} alt="" /> : <div className="card-placeholder">💿</div>}
                   </button>
                   <button
-                    className="cover-play"
+                    className={`cover-play ${isCurrentAlbum ? 'is-pause' : 'is-play'}`}
                     disabled={ids.length === 0}
-                    onClick={() => playerControls.playPlaylist(ids, false)}
-                    aria-label={`Tocar álbum ${a.title}`}
-                    title="Tocar álbum"
+                    onClick={() => {
+                      if (isCurrentAlbum) {
+                        playerControls.togglePlay();
+                      } else {
+                        playerControls.playPlaylist(ids, false);
+                      }
+                    }}
+                    aria-label={isCurrentAlbum ? `Pausar álbum ${a.title}` : `Tocar álbum ${a.title}`}
+                    title={isCurrentAlbum ? 'Pausar álbum' : 'Tocar álbum'}
                   >
-                    ▶
+                    {isCurrentAlbum ? '❚❚' : '▶'}
                   </button>
                 </div>
                 <button className="card-content" onClick={() => go({ kind: 'album', id: a.id })}>
