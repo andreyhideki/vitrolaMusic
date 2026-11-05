@@ -11,6 +11,10 @@ const DOWNLOADER_BIN = 'yt-dlp';
 const TMP_PREFIX = 'tmp-download-';
 const TIMEOUT_MS = 180_000;
 
+/** Cliente usado para extrair streams do YouTube. O cliente 'android' costuma
+ *  contornar restrições SABR/experimentos que bloqueiam o cliente web. */
+const YT_EXTRACTOR_ARGS = 'youtube:player_client=android';
+
 /** Progresso atual dos downloads em andamento (0-100). */
 export const downloadProgress = new Map<number, number>();
 
@@ -47,14 +51,16 @@ export const externalProvider: AudioProvider = {
 
     const query = `ytsearch1:${track.artistName} - ${track.title}`;
     const out = tmpPath(track.id);
-    const quality = audioQualityArg(getSettings().audioQuality);
+    const settings = getSettings();
+    const quality = audioQualityArg(settings.audioQuality);
+    const cookiesPath = settings.youtubeCookiesPath;
 
     // Remove arquivo temporário anterior, se existir, para evitar conflitos.
     await fs.rm(out, { force: true });
     downloadProgress.set(track.id, 0);
 
     try {
-      await runDownloader(track.id, out, quality, query);
+      await runDownloaderWithFallback(track.id, out, quality, query, cookiesPath);
     } catch (err) {
       await fs.rm(out, { force: true });
       downloadProgress.delete(track.id);
@@ -73,24 +79,25 @@ export const externalProvider: AudioProvider = {
   },
 };
 
-function runDownloader(trackId: number, out: string, quality: string, query: string): Promise<void> {
+function runDownloader(trackId: number, out: string, quality: string, query: string, cookiesPath?: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const proc = spawn(
-      DOWNLOADER_BIN,
-      [
-        '--no-playlist',
-        '--extract-audio',
-        '--audio-format', 'mp3',
-        '--audio-quality', quality,
-        '--no-warnings',
-        '--geo-bypass',
-        '--newline',
-        '--progress-template', '[download] %(progress._percent_str)s',
-        '-o', out,
-        query,
-      ],
-      { timeout: TIMEOUT_MS },
-    );
+    const args = [
+      '--no-playlist',
+      '--extract-audio',
+      '--audio-format', 'mp3',
+      '--audio-quality', quality,
+      '--no-warnings',
+      '--geo-bypass',
+      '--extractor-args', YT_EXTRACTOR_ARGS,
+      '--newline',
+      '--progress-template', '[download] %(progress._percent_str)s',
+    ];
+    if (cookiesPath) {
+      args.push('--cookies', cookiesPath);
+    }
+    args.push('-o', out, query);
+
+    const proc = spawn(DOWNLOADER_BIN, args, { timeout: TIMEOUT_MS });
 
     let stderr = '';
 
@@ -114,6 +121,30 @@ function runDownloader(trackId: number, out: string, quality: string, query: str
   });
 }
 
+/**
+ * Tenta o download primeiro sem cookies (anonimamente). Muitas contas no
+ * experimento SABR-only do YouTube só conseguem formatos com o cliente web,
+ * enquanto conexões anônimas conseguem áudio via cliente mobile. Se falhar e
+ * houver cookies configurados, faz uma segunda tentativa com os cookies.
+ */
+async function runDownloaderWithFallback(
+  trackId: number,
+  out: string,
+  quality: string,
+  query: string,
+  cookiesPath?: string,
+): Promise<void> {
+  try {
+    await runDownloader(trackId, out, quality, query, undefined);
+    return;
+  } catch (err) {
+    if (!cookiesPath) throw err;
+  }
+  // Limpa eventual arquivo parcial da primeira tentativa.
+  await fs.rm(out, { force: true });
+  await runDownloader(trackId, out, quality, query, cookiesPath);
+}
+
 /** Indica se um caminho é um temporário gerado por este provider. */
 export function isTmpExternal(filePath: string): boolean {
   const name = path.basename(filePath);
@@ -128,26 +159,33 @@ export async function getStreamUrl(track: TrackForDownload): Promise<string | nu
   if (!(await downloaderAvailable())) return null;
 
   const query = `ytsearch1:${track.artistName} - ${track.title}`;
-  const quality = audioQualityArg(getSettings().audioQuality);
+  const settings = getSettings();
+  const quality = audioQualityArg(settings.audioQuality);
+  const cookiesPath = settings.youtubeCookiesPath;
 
-  try {
-    const { stdout } = await execFileAsync(
-      DOWNLOADER_BIN,
-      [
-        '--no-playlist',
-        '--extract-audio',
-        '--audio-format', 'mp3',
-        '--audio-quality', quality,
-        '--no-warnings',
-        '--geo-bypass',
-        '-g',
-        query,
-      ],
-      { timeout: 60_000 },
-    );
-    const url = stdout.trim().split('\n')[0];
-    return url || null;
-  } catch {
-    return null;
+  const baseArgs = [
+    '--no-playlist',
+    '--extract-audio',
+    '--audio-format', 'mp3',
+    '--audio-quality', quality,
+    '--no-warnings',
+    '--geo-bypass',
+    '--extractor-args', YT_EXTRACTOR_ARGS,
+    '-g',
+  ];
+
+  async function tryStream(args: string[]): Promise<string | null> {
+    try {
+      const { stdout } = await execFileAsync(DOWNLOADER_BIN, args, { timeout: 60_000 });
+      const url = stdout.trim().split('\n')[0];
+      return url || null;
+    } catch {
+      return null;
+    }
   }
+
+  const anonymous = await tryStream([...baseArgs, query]);
+  if (anonymous) return anonymous;
+  if (!cookiesPath) return null;
+  return tryStream([...baseArgs, '--cookies', cookiesPath, query]);
 }
