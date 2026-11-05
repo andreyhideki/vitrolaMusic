@@ -8,11 +8,14 @@ settingsRouter.get('/', (_req, res) => {
 });
 
 settingsRouter.post('/', (req, res) => {
-  const { audioQuality, mediaDir, streamWithoutDownload } = req.body ?? {};
+  const { audioQuality, mediaDir, streamWithoutDownload, cleanupUnusedAfterDays, youtubeCookiesPath, youtubeCookiesContent } = req.body ?? {};
   const updates: Partial<{
     audioQuality: 'low' | 'medium' | 'high';
     mediaDir: string;
     streamWithoutDownload: boolean;
+    cleanupUnusedAfterDays: number;
+    youtubeCookiesPath: string;
+    youtubeCookiesContent: string;
   }> = {};
   if (audioQuality === 'low' || audioQuality === 'medium' || audioQuality === 'high') {
     updates.audioQuality = audioQuality;
@@ -22,6 +25,15 @@ settingsRouter.post('/', (req, res) => {
   }
   if (typeof streamWithoutDownload === 'boolean') {
     updates.streamWithoutDownload = streamWithoutDownload;
+  }
+  if (typeof cleanupUnusedAfterDays === 'number' && Number.isFinite(cleanupUnusedAfterDays) && cleanupUnusedAfterDays >= 0) {
+    updates.cleanupUnusedAfterDays = cleanupUnusedAfterDays;
+  }
+  if (typeof youtubeCookiesPath === 'string') {
+    updates.youtubeCookiesPath = youtubeCookiesPath;
+  }
+  if (typeof youtubeCookiesContent === 'string') {
+    updates.youtubeCookiesContent = youtubeCookiesContent;
   }
   res.json(updateSettings(updates));
 });

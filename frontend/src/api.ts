@@ -50,6 +50,7 @@ export interface AppSettings {
   mediaDir: string;
   streamWithoutDownload: boolean;
   cleanupUnusedAfterDays: number;
+  youtubeCookiesPath: string;
 }
 
 export interface ArtistDto {

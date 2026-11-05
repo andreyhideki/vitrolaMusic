@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { db } from './db.js';
 import { config } from './config.js';
@@ -10,6 +11,7 @@ export interface AppSettings {
   mediaDir: string;
   streamWithoutDownload: boolean;
   cleanupUnusedAfterDays: number;
+  youtubeCookiesPath: string;
 }
 
 const DEFAULTS: AppSettings = {
@@ -17,6 +19,7 @@ const DEFAULTS: AppSettings = {
   mediaDir: '',
   streamWithoutDownload: false,
   cleanupUnusedAfterDays: 0,
+  youtubeCookiesPath: '',
 };
 
 function get(key: keyof AppSettings): string {
@@ -45,10 +48,11 @@ export function getSettings(): AppSettings {
     mediaDir: get('mediaDir') || DEFAULTS.mediaDir,
     streamWithoutDownload: boolOf(get('streamWithoutDownload'), DEFAULTS.streamWithoutDownload),
     cleanupUnusedAfterDays: numberOf(get('cleanupUnusedAfterDays'), DEFAULTS.cleanupUnusedAfterDays),
+    youtubeCookiesPath: get('youtubeCookiesPath') || DEFAULTS.youtubeCookiesPath,
   };
 }
 
-export function updateSettings(s: Partial<AppSettings>): AppSettings {
+export function updateSettings(s: Partial<AppSettings> & { youtubeCookiesContent?: string }): AppSettings {
   if (s.audioQuality !== undefined) set('audioQuality', s.audioQuality);
   if (s.mediaDir !== undefined) {
     const dir = s.mediaDir.trim();
@@ -57,6 +61,21 @@ export function updateSettings(s: Partial<AppSettings>): AppSettings {
   }
   if (s.streamWithoutDownload !== undefined) set('streamWithoutDownload', s.streamWithoutDownload ? '1' : '0');
   if (s.cleanupUnusedAfterDays !== undefined) set('cleanupUnusedAfterDays', String(Math.floor(s.cleanupUnusedAfterDays)));
+
+  if (s.youtubeCookiesContent !== undefined) {
+    const content = s.youtubeCookiesContent.trim();
+    const cookiesFile = path.join(config.dataDir, 'youtube-cookies.txt');
+    if (content) {
+      fsp.writeFile(cookiesFile, content, 'utf-8').catch(() => {});
+      set('youtubeCookiesPath', cookiesFile);
+    } else {
+      fsp.rm(cookiesFile, { force: true }).catch(() => {});
+      set('youtubeCookiesPath', '');
+    }
+  } else if (s.youtubeCookiesPath !== undefined) {
+    set('youtubeCookiesPath', s.youtubeCookiesPath.trim());
+  }
+
   return getSettings();
 }
 

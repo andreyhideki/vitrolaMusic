@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { api, AppSettings, errorMessage, send } from '../api';
 
 interface Props {
@@ -23,11 +24,15 @@ export function SettingsModal({ open, onClose }: Props) {
     mediaDir: '',
     streamWithoutDownload: false,
     cleanupUnusedAfterDays: 0,
+    youtubeCookiesPath: '',
   });
+  const [showCookiesHelp, setShowCookiesHelp] = useState(false);
+  const [cookiesText, setCookiesText] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
   const folderInputRef = useRef<HTMLInputElement>(null);
+  const cookiesFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -45,8 +50,12 @@ export function SettingsModal({ open, onClose }: Props) {
     setLoading(true);
     setError('');
     try {
-      const s = await send<AppSettings>('POST', '/settings', settings);
+      const s = await send<AppSettings>('POST', '/settings', {
+        ...settings,
+        youtubeCookiesContent: cookiesText,
+      });
       setSettings(s);
+      setCookiesText('');
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (err) {
@@ -66,7 +75,16 @@ export function SettingsModal({ open, onClose }: Props) {
     }
   }
 
-  return (
+  function handleCookiesFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const fileName = files[0].name;
+    if (fileName) {
+      setSettings((prev) => ({ ...prev, youtubeCookiesPath: `/app/data/${fileName}` }));
+    }
+  }
+
+  const modal = (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <h2>Configurações</h2>
@@ -141,6 +159,74 @@ export function SettingsModal({ open, onClose }: Props) {
             </div>
           </div>
 
+          <div className="form-group">
+            <label>Cookies do YouTube (opcional)</label>
+            <textarea
+              rows={5}
+              value={cookiesText}
+              onChange={(e) => setCookiesText(e.target.value)}
+              placeholder={"Passo a passo:\n" +
+                "1) Faça login no YouTube no navegador.\n" +
+                "2) Instale a extensão 'Get cookies.txt' e exporte os cookies de youtube.com.\n" +
+                "3) Abra o arquivo .txt, copie todo o conteúdo e cole aqui.\n" +
+                "O Vitrola salvará automaticamente o arquivo no container."}
+            />
+            {settings.youtubeCookiesPath && cookiesText === '' && (
+              <p className="success">Cookies configurados.</p>
+            )}
+            <p className="hint">
+              Cole o conteúdo completo do arquivo de cookies exportado do navegador. O Vitrola salva
+              automaticamente o arquivo no container e o utiliza nos downloads.
+            </p>
+            <button
+              type="button"
+              className="small"
+              onClick={() => setShowCookiesHelp((v) => !v)}
+            >
+              {showCookiesHelp ? 'Ocultar instruções' : 'Como obter o arquivo de cookies'}
+            </button>
+            {showCookiesHelp && (
+              <div className="hint-box">
+                <ol>
+                  <li>Abra o YouTube no navegador e faça login na conta desejada.</li>
+                  <li>
+                    Instale uma extensão de exportação de cookies. Recomendadas:
+                    <ul>
+                      <li>
+                        <strong>Chrome/Edge:</strong> <em>Get cookies.txt</em> (ou <em>cookies.txt</em>).
+                      </li>
+                      <li>
+                        <strong>Firefox:</strong> <em>cookies.txt</em>.
+                      </li>
+                    </ul>
+                  </li>
+                  <li>
+                    Com a aba do YouTube aberta e logada, clique no ícone da extensão e escolha exportar
+                    os cookies do domínio <code>youtube.com</code>.
+                  </li>
+                  <li>
+                    Salve o arquivo como <code>youtube-cookies.txt</code>. O conteúdo deve conter linhas
+                    começando com <code>youtube.com</code> e campos como <code>SID</code>, <code>SSID</code>,{' '}
+                    <code>APISID</code>, <code>SAPISID</code> e <code>LOGIN_INFO</code>.
+                  </li>
+                  <li>
+                    Abra o arquivo de texto exportado, selecione todo o conteúdo (<kbd>Ctrl+A</kbd> /{' '}
+                    <kbd>Cmd+A</kbd>) e copie (<kbd>Ctrl+C</kbd> / <kbd>Cmd+C</kbd>).
+                  </li>
+                  <li>
+                    Cole o conteúdo no campo <strong>Cookies do YouTube</strong> acima e clique em{' '}
+                    <strong>Salvar</strong>. O Vitrola grava o arquivo automaticamente no container.
+                  </li>
+                </ol>
+                <div className="warning-box">
+                  <strong>Atenção:</strong> usar cookies de uma conta Google pode, em teoria, resultar em
+                  advertências, limitações temporárias ou até bloqueio da conta pelo YouTube, especialmente
+                  se houver muitos downloads automatizados. Use por sua conta e risco.
+                </div>
+              </div>
+            )}
+          </div>
+
           {error && <p className="error">{error}</p>}
           {saved && <p className="success">Salvo!</p>}
 
@@ -154,4 +240,6 @@ export function SettingsModal({ open, onClose }: Props) {
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }

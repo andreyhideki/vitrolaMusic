@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api, AlbumDto, errorMessage, send, TrackDto } from '../api';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { useLibrary } from '../library';
+import { useNotice } from '../notice';
 import { useNav } from '../nav';
 import { playerControls } from '../player/usePlayerAudio';
 import { fmtBitrate, fmtDuration, STATUS_LABEL } from '../format';
@@ -23,9 +24,11 @@ export function AlbumView({ id }: { id: number }) {
   const [progressMap, setProgressMap] = useState<Record<number, ProgressInfo>>({});
   const [confirm, setConfirm] = useState<{ open: boolean; title: string; message: string; onConfirm: () => void } | null>(null);
   const go = useNav((s) => s.go);
+  const showNotice = useNotice((s) => s.show);
   const pollingRef = useRef<Set<number>>(new Set());
   const startedRef = useRef<Set<number>>(new Set());
   const mountedRef = useRef(true);
+  const notifiedRef = useRef(false);
 
   async function load() {
     try {
@@ -64,6 +67,23 @@ export function AlbumView({ id }: { id: number }) {
         startPolling(t.id);
       }
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
+
+  useEffect(() => {
+    if (!data || notifiedRef.current) return;
+    const localTracks = data.tracks.filter((t) => t.id > 0);
+    if (localTracks.length === 0) return;
+    const allDone = localTracks.every((t) => t.downloadStatus === 'ready' || t.downloadStatus === 'failed');
+    const failedCount = localTracks.filter((t) => t.downloadStatus === 'failed').length;
+    if (allDone && failedCount > 0) {
+      notifiedRef.current = true;
+      const firstError = localTracks.find((t) => t.downloadStatus === 'failed' && t.error)?.error ?? '';
+      const summary = failedCount === localTracks.length
+        ? `Não foi possível baixar nenhuma faixa do álbum "${data.album.title}".`
+        : `${failedCount} de ${localTracks.length} faixas do álbum "${data.album.title}" não puderam ser baixadas.`;
+      showNotice(`${summary}${firstError ? ` ${firstError}` : ''}`, 'error');
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
 
@@ -230,6 +250,11 @@ export function AlbumView({ id }: { id: number }) {
                   <span className="status ready">{STATUS_LABEL.ready}</span>
                   {t.bitrateKbps && <span className="muted bitrate">{fmtBitrate(t.bitrateKbps)}</span>}
                 </>
+              )}
+              {effectiveStatus === 'failed' && t.error && (
+                <span className="status failed" title={t.error}>
+                  Erro
+                </span>
               )}
               {isRemote && <span className="status pending">Não baixada</span>}
               <span className="muted">{fmtDuration(t.durationSeconds)}</span>
