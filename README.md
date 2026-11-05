@@ -60,13 +60,19 @@ cd frontend && npm run dev         # http://localhost:5173
 | `IMPORT_DIR` | `./data/import` | Pasta onde você coloca os arquivos de áudio que possui |
 | `CORS_ORIGIN` | `http://localhost:5173` | Origem permitida no CORS |
 
+### Cookies do YouTube (opcional)
+
+Se o seu IP/assinatura de rede estiver sendo bloqueada pelo YouTube, você pode colar o conteúdo do arquivo de cookies da sua conta Google nas configurações da aplicação. O backend salva em `./data/youtube-cookies.txt` e repassa ao `yt-dlp`.
+
+> ⚠️ **Atenção:** contas no experimento **SABR-only** do YouTube podem ficar sem formatos de áudio disponíveis quando usam cookies. Por isso o downloader tenta primeiro uma conexão anônima e só usa os cookies se essa tentativa falhar. Use cookies por sua conta e risco, respeitando os Termos de Serviço do Google.
+
 ## Como as músicas chegam ao player
 
 1. Você busca na barra de pesquisa. A API consulta um catálogo público externo (metadados e capas, sem áudio).
 2. Ao importar uma faixa ou álbum, a API cria os registros locais e enfileira o download.
 3. O download usa **fontes de áudio** (`api/src/services/downloader.ts`). A ordem de busca é:
    1. `localFolderProvider`: procura o arquivo na pasta `IMPORT_DIR` pelo nome (`Artista - Título.mp3`, por exemplo) e copia para `data/media`.
-   2. provedor externo: se não encontrar localmente, busca a faixa em uma fonte externa de áudio, converte para MP3 e salva em `data/media`.
+   2. provedor externo (`yt-dlp`): se não encontrar localmente, busca a faixa em uma fonte externa de áudio, converte para MP3 e salva em `data/media`. Para contornar restrições SABR do YouTube, o `yt-dlp` usa `--extractor-args "youtube:player_client=android"` e tenta primeiro **sem cookies**; só usa os cookies configurados se a tentativa anônima falhar.
 4. Quando a faixa fica `ready`, o player toca via `/api/tracks/:id/stream`, com suporte a HTTP `Range`.
 
 ## ⚖️ Disclaimer / Isenção de Responsabilidade

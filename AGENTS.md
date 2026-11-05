@@ -29,11 +29,14 @@
 ## Downloads e fontes de áudio
 
 - O downloader (`api/src/services/downloader.ts`) tenta primeiro arquivo local em `IMPORT_DIR`, depois busca a faixa em uma fonte externa via `externalProvider` (`api/src/services/external.ts`).
-- O container da API já inclui `ffmpeg`, `python3` e a ferramenta de download. Não é necessário instalar no host quando usa Docker.
+- O container da API já inclui `ffmpeg`, `python3` e o `yt-dlp` (versão fixada em `api/Dockerfile`). Não é necessário instalar no host quando usa Docker.
 - Metadados externos vêm de `api/src/services/catalogApi.ts`. Identificadores externos usam o prefixo `catalog:`; a migração em `api/src/db.ts` converte prefixos legados ao iniciar.
 - A tabela `tracks` possui a coluna `last_played_at`. O endpoint `POST /api/tracks/:id/played` registra a reprodução; o player chama esse endpoint ao iniciar uma faixa.
 - A tela inicial mostra o espaço usado pelas músicas baixadas via `GET /api/library/usage`.
 - A configuração `cleanupUnusedAfterDays` (0 = desativado) define em quantos dias faixas baixadas e não tocadas são removidas automaticamente pelo scheduler (`api/src/services/cleanup.ts`); o valor de 180 dias está disponível na UI.
+- Configuração de cookies do YouTube (`api/src/settings.ts`): o usuário cola o conteúdo do arquivo de cookies diretamente no modal de configurações; o backend salva em `./data/youtube-cookies.txt` e o `yt-dlp` recebe `--cookies <caminho>` em downloads e streams. Inclui painel com passo a passo e alerta de risco de bloqueio/limitação da conta Google.
+- O `externalProvider` (`api/src/services/external.ts`) usa `--extractor-args "youtube:player_client=android"` para contornar restrições SABR que bloqueiam o cliente web.
+- Downloads e streams tentam primeiro **sem cookies** (conexão anônima); apenas se essa tentativa falhar e houver cookies configurados é que os cookies são usados. Isso evita que contas no experimento SABR-only do YouTube fiquem sem formatos de áudio disponíveis.
 - Nome final dos arquivos: `Artista - Álbum - Título.mp3`.
 - Status de download (`pending` | `downloading` | `ready` | `failed`) fica na tabela `tracks`. O endpoint `GET /api/albums/:id` normaliza o status pela existência real do arquivo no disco: se o arquivo existe, é `ready`; se não existe, nunca é `ready`.
 
@@ -63,12 +66,15 @@
 - O `file_path` na tabela `tracks` é relativo a `getEffectiveMediaDir()`. Verifique a existência do arquivo antes de confiar em `download_status = 'ready'`.
 - O player consulta `useLibrary` para saber se uma faixa está pronta (`isReady`). Sempre que uma faixa terminar de baixar, atualize o cache da biblioteca com `useLibrary.getState().upsert([track])`.
 - Telas com polling de download (`AlbumView`, `AlbumPreviewView`) devem rastrear quais faixas já estão sendo observadas para evitar requisições em loop.
+- **Cookies do YouTube e SABR:** contas no experimento SABR-only do YouTube podem receber apenas storyboards (imagens) quando os cookies são enviados, resultando em `Requested format is not available`. O downloader contorna isso tentando primeiro sem cookies; só recorre aos cookies se a tentativa anônima falhar.
 
 ## Estado atual / Features implementadas
 
 - Busca unificada (biblioteca local + catálogo externo), com resultados ordenados em Álbuns, Playlists (locais) e Músicas; campo de busca sticky, botão de limpar e artistas clicáveis.
 - Menu "Paranoic" (frontend/src/views/AnalyticsView.tsx) com estatísticas de reprodução: totalizadores, ranking por música/artista/álbum/gênero e gráficos por dia/semana/mês/ano.
 - Página inicial (`frontend/src/views/LibraryView.tsx`, menu "Início") em estilo dashboard: saudação, contagem de álbuns/faixas/playlists, espaço usado em disco e ações "Tocar tudo" / "Aleatório".
+- A página Início recarrega a biblioteca automaticamente a cada 5 segundos e ao retornar à aba (`visibilitychange`), refletindo álbns/faixas recém-baixados sem refresh manual.
+- Filtro de visualização na página Início: botão "Álbuns baixados" exibe uma grid completa dos álbuns disponíveis localmente, com capa, artista, contagem de faixas e play por álbum.
 - Carrossel de álbuns na home (`frontend/src/components/AlbumCarousel.tsx`): arrastável, com setas < > ao lado do título que rolam de 1 a 3 álbuns por clique.
 - Capas de álbum na página inicial têm botão de play em destaque (borda verde) que toca o álbum; vira pause (borda vermelha) quando o álbum está sendo reproduzido.
 - Importação de faixas e álbuns do catálogo externo, com enfileiramento automático de downloads.
@@ -80,6 +86,8 @@
 - Histórico das últimas 10 buscas, persistido em `localStorage`.
 - Endpoint `GET /api/tracks/:id/progress` retorna percentual e status do download, também verificando a existência real do arquivo no disco.
 - Normalização de status no endpoint de álbum pela existência real do arquivo em disco.
+- Toast/notificações globais (`frontend/src/notice.ts` + `frontend/src/components/NoticeContainer.tsx`) exibem alertas de erro quando todas as faixas (ou parte delas) de um álbum falham no download.
+- Tela de álbum exibe indicador "Erro" nas faixas com `download_status = 'failed'`.
 - Modal de confirmação customizado (`frontend/src/components/ConfirmModal.tsx`) para exclusão de álbuns, faixas e playlists, substituindo o `confirm` nativo do navegador.
 - PWA — Fase 1 (instalável): manifest, ícones PWA (`frontend/public/pwa-*.png`, `apple-touch-icon.png`), meta tags mobile, safe areas e Service Worker gerado pelo `vite-plugin-pwa` com prompt de atualização (`frontend/src/components/PwaReloadPrompt.tsx`).
 

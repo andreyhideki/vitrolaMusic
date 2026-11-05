@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     python3 \
     python3-pip \
-    && python3 -m pip install --break-system-packages --no-cache-dir yt-dlp \
+    && python3 -m pip install --break-system-packages --no-cache-dir yt-dlp==2026.10.26 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY package.json package-lock.json ./
