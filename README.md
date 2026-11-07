@@ -8,6 +8,19 @@ vitrolaMusic/
 └── frontend/   # React + Vite + TypeScript + Zustand (player, fila, interface)
 ```
 
+## Leve e autocontido
+
+O Vitrola Music foi pensado para rodar com pouca infraestrutura:
+
+- **Apenas dois containers** (API + frontend).
+- **Banco de dados local** com SQLite — não precisa de PostgreSQL, MySQL ou serviço externo.
+- **Fila de downloads simples** em memória — não precisa de Redis, BullMQ ou RabbitMQ.
+- **Uso de RAM em execução** (medido com `docker stats` em ambiente de desenvolvimento):
+  - API: ~100 MB
+  - Frontend: ~140 MB
+
+> Os números podem variar conforme a carga, mas a aplicação inteira costuma rodar confortavelmente em menos de 300 MB de RAM. As imagens Docker são maiores por incluírem Node.js, ffmpeg, Python e o `yt-dlp`, mas o consumo em runtime é baixo.
+
 ## Como rodar
 
 ### Com Docker (recomendado)
