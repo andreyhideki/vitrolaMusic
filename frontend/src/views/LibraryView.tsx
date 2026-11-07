@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, AlbumDto, errorMessage, GenreDto, LibraryResponse, PlaylistSummary, send, TrackDto } from '../api';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { BUY_ME_A_COFFEE_URL } from '../config';
 import { useLibrary } from '../library';
 import { useNav } from '../nav';
 import { playerControls } from '../player/usePlayerAudio';
@@ -171,6 +172,15 @@ export function LibraryView() {
           >
             Aleatório
           </button>
+          <a
+            className="buy-me-a-coffee"
+            href={BUY_ME_A_COFFEE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Buy me a coffee"
+          >
+            ☕ Buy me a coffee
+          </a>
         </div>
       </div>
 

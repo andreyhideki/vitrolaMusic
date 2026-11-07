@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNav } from '../nav';
 import { useUi } from '../ui';
+import { BUY_ME_A_COFFEE_URL } from '../config';
 import { SettingsModal } from './SettingsModal';
 
 const MENU = [
@@ -64,6 +65,16 @@ export function Sidebar() {
           <span className="menu-icon">⚙</span>
           {!collapsed && <span className="menu-label">Configurações</span>}
         </button>
+        <a
+          className="buy-me-a-coffee"
+          href={BUY_ME_A_COFFEE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Buy me a coffee"
+        >
+          <span className="menu-icon">☕</span>
+          {!collapsed && <span className="menu-label">Buy me a coffee</span>}
+        </a>
       </div>
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </aside>

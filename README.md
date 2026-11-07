@@ -12,9 +12,7 @@ vitrolaMusic/
 
 Se o Vitrola Music te ajudou e você quer apoiar o desenvolvimento:
 
-[![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-%23FFDD00.svg?&style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://SEU_LINK_DE_PAGAMENTO_AQUI)
-
-> Substitua o link acima pelo seu link de pagamento (Stripe, Buy Me a Coffee, PayPal, etc.).
+[![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-%23FFDD00.svg?&style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buy.stripe.com/test_7sY28rfSV9yh6Edccn9IQ00)
 
 ## Leve e autocontido
 
