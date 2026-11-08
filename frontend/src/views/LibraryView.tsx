@@ -162,13 +162,13 @@ export function LibraryView() {
           <button
             className="primary"
             disabled={readyTrackIds.length === 0}
-            onClick={() => playerControls.playPlaylist(readyTrackIds, false)}
+            onClick={() => playerControls.playPlaylist(readyTrackIds, false, { kind: 'library' })}
           >
             Tocar tudo
           </button>
           <button
             disabled={readyTrackIds.length === 0}
-            onClick={() => playerControls.playPlaylist(readyTrackIds, true)}
+            onClick={() => playerControls.playPlaylist(readyTrackIds, true, { kind: 'library' })}
           >
             Aleatório
           </button>
@@ -240,7 +240,7 @@ export function LibraryView() {
                           if (isCurrentAlbum) {
                             playerControls.togglePlay();
                           } else {
-                            playerControls.playPlaylist(ids, false);
+                            playerControls.playPlaylist(ids, false, { kind: 'album', id: a.id });
                           }
                         }}
                         aria-label={isCurrentAlbum ? `Pausar álbum ${a.title}` : `Tocar álbum ${a.title}`}

@@ -3,6 +3,7 @@ import { send } from '../api';
 import { usePlayerStore } from './store';
 import { usePlayback } from './playback';
 import * as Q from './queue';
+import type { View } from '../nav';
 
 export interface TrackMeta {
   title: string;
@@ -141,12 +142,14 @@ async function go(from: Q.QueueState, advance: Advance): Promise<string | null> 
 
 /** Ações do player. Use estas funções na interface (elas tocam o áudio). */
 export const playerControls = {
-  playPlaylist(trackIds: string[], shuffle: boolean): Promise<string | null> {
+  playPlaylist(trackIds: string[], shuffle: boolean, source: View | null = null): Promise<string | null> {
+    store.setState({ source });
     return go(Q.startPlaylist(store.getState(), trackIds, shuffle), Q.next);
   },
 
   /** Toca a partir de um índice, em ordem sequencial. */
-  playFrom(trackIds: string[], index: number): Promise<string | null> {
+  playFrom(trackIds: string[], index: number, source: View | null = null): Promise<string | null> {
+    store.setState({ source });
     const started = Q.startPlaylist(store.getState(), trackIds, false);
     return go({ ...started, cursor: index - 1 }, Q.next);
   },

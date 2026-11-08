@@ -207,8 +207,8 @@ export function AlbumView({ id }: { id: number }) {
         </div>
       </div>
       <div className="actions">
-        <button className="primary" disabled={readyIds.length === 0} onClick={() => playerControls.playPlaylist(readyIds, false)}>Tocar</button>
-        <button disabled={readyIds.length === 0} onClick={() => playerControls.playPlaylist(readyIds, true)}>Aleatório</button>
+        <button className="primary" disabled={readyIds.length === 0} onClick={() => playerControls.playPlaylist(readyIds, false, { kind: 'album', id })}>Tocar</button>
+        <button disabled={readyIds.length === 0} onClick={() => playerControls.playPlaylist(readyIds, true, { kind: 'album', id })}>Aleatório</button>
         <button className="danger" onClick={askDeleteAlbum}>Excluir álbum</button>
       </div>
 
@@ -227,7 +227,7 @@ export function AlbumView({ id }: { id: number }) {
               <button
                 className="play-btn"
                 disabled={!ready}
-                onClick={() => ready && playerControls.playFrom(readyIds, readyIds.indexOf(String(t.id)))}
+                onClick={() => ready && playerControls.playFrom(readyIds, readyIds.indexOf(String(t.id)), { kind: 'album', id })}
                 aria-label={`Tocar ${t.title}`}
               >
                 {ready ? '▶' : '·'}
