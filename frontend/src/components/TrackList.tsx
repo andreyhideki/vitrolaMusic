@@ -29,6 +29,8 @@ export function TrackList({ tracks, showAlbum = false, onDelete }: Props) {
   const playing = usePlayback((s) => s.playing);
   const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
   const [notice, setNotice] = useState('');
+  // Linha com ações expandidas no mobile (menu "⋯").
+  const [openRow, setOpenRow] = useState<number | null>(null);
 
   // Usa a versão mais recente do cache (status de download atualizado).
   const list = tracks.map((t) => byId[String(t.id)] ?? t);
@@ -67,7 +69,12 @@ export function TrackList({ tracks, showAlbum = false, onDelete }: Props) {
           const ready = t.downloadStatus === 'ready';
           const isCurrent = String(t.id) === currentTrackId;
           return (
-            <li key={`${t.id}-${i}`} className={`track ${ready ? '' : 'unavailable'} ${isCurrent ? 'playing' : ''}`}>
+            <li
+              key={`${t.id}-${i}`}
+              className={`track ${ready ? '' : 'unavailable'} ${isCurrent ? 'playing' : ''} ${
+                openRow === i ? 'actions-open' : ''
+              }`}
+            >
               <button
                 className="play-btn"
                 disabled={!ready}
@@ -90,8 +97,17 @@ export function TrackList({ tracks, showAlbum = false, onDelete }: Props) {
                 {STATUS_LABEL[t.downloadStatus]}
               </span>
               {t.bitrateKbps && <span className="muted bitrate">{fmtBitrate(t.bitrateKbps)}</span>}
+              <span className="muted duration">{fmtDuration(t.durationSeconds)}</span>
+              <button
+                className="icon more-toggle"
+                onClick={() => setOpenRow(openRow === i ? null : i)}
+                aria-label="Mais ações"
+                aria-expanded={openRow === i}
+              >
+                ⋯
+              </button>
+              <div className="track-actions">
               {t.downloadStatus === 'failed' && <button onClick={() => retry(t.id)}>Tentar de novo</button>}
-              <span className="muted">{fmtDuration(t.durationSeconds)}</span>
               <button disabled={!ready} onClick={() => playerControls.playNext(String(t.id))}>
                 Tocar a seguir
               </button>
@@ -121,6 +137,7 @@ export function TrackList({ tracks, showAlbum = false, onDelete }: Props) {
                   Excluir
                 </button>
               )}
+              </div>
             </li>
           );
         })}

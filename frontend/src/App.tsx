@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { api, AppSettings, TrackDto } from './api';
 import { useLibrary } from './library';
 import { useNav, View } from './nav';
-import { useUi } from './ui';
+import { useSidebarCollapsed, useUi } from './ui';
+import { useScreenSize } from './useMediaQuery';
 import { usePlayerStore } from './player/store';
 import { PlayerAudioConfig, usePlayerAudio } from './player/usePlayerAudio';
 import { useTheme } from './theme';
@@ -118,13 +119,32 @@ function AuthenticatedApp() {
 
   usePlayerAudio(playerConfig);
   const view = useNav((s) => s.view);
-  const sidebarCollapsed = useUi((s) => s.sidebarCollapsed);
+  const screen = useScreenSize();
+  const sidebarCollapsed = useSidebarCollapsed();
+  const drawerOpen = useUi((s) => s.drawerOpen);
+  const closeDrawer = useUi((s) => s.closeDrawer);
+
+  useEffect(() => {
+    useUi.getState().setScreen(screen);
+  }, [screen]);
+
+  // No mobile, fecha a gaveta ao navegar.
+  useEffect(() => {
+    closeDrawer();
+  }, [view, closeDrawer]);
 
   if (!settingsLoaded) return null;
 
   return (
-    <div className={`app ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+    <div
+      className={`app screen-${screen} ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${
+        drawerOpen ? 'drawer-open' : ''
+      }`}
+    >
       <Sidebar />
+      {screen === 'mobile' && drawerOpen && (
+        <div className="drawer-backdrop" onClick={closeDrawer} aria-hidden="true" />
+      )}
       <div className="main-area">
         <Header />
         <main>
