@@ -1,6 +1,6 @@
 # Ambiente de desenvolvimento da API. O código é montado por volume (hot reload).
-# node:20-bookworm já inclui toolchain (python, make, g++), necessária para o better-sqlite3 se não houver binário pré-compilado.
-FROM node:20-bookworm
+# node:24-bookworm (LTS) já inclui toolchain (python, make, g++), necessária para o better-sqlite3 se não houver binário pré-compilado.
+FROM node:24-bookworm
 
 WORKDIR /app
 
@@ -17,5 +17,9 @@ RUN npm ci
 
 COPY . .
 
-EXPOSE 3001
+# Roda sem privilégios de root (uid 1000). O "make up" ajusta o dono de ./data.
+RUN chown -R node:node /app
+USER node
+
+EXPOSE 5172
 CMD ["npm", "run", "dev"]

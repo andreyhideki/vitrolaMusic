@@ -2,17 +2,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { db } from '../db.js';
 import { deleteTrack } from '../repo.js';
-import { getEffectiveMediaDir, getSettings } from '../settings.js';
+import { getEffectiveMediaDir, getSettings, resolveTrackFile } from '../settings.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface CleanupResult {
   deleted: number;
   freedBytes: number;
-}
-
-function getMediaPath(relativePath: string): string {
-  return path.join(getEffectiveMediaDir(), relativePath);
 }
 
 export function cleanupUnusedTracks(days: number): CleanupResult {
@@ -27,11 +23,12 @@ export function cleanupUnusedTracks(days: number): CleanupResult {
 
   let freedBytes = 0;
   for (const row of rows) {
-    if (row.file_path) {
+    const filePath = resolveTrackFile(row.file_path);
+    if (filePath) {
       try {
-        const stat = fs.statSync(getMediaPath(row.file_path));
+        const stat = fs.statSync(filePath);
         freedBytes += stat.size;
-        fs.rmSync(getMediaPath(row.file_path), { force: true });
+        fs.rmSync(filePath, { force: true });
       } catch {
         // arquivo pode já estar ausente
       }

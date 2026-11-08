@@ -1,10 +1,12 @@
 import { Router, type Response } from 'express';
 import { createReadStream } from 'node:fs';
+import { Readable } from 'node:stream';
+import type { ReadableStream as WebReadableStream } from 'node:stream/web';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import * as repo from '../repo.js';
 import { enqueueDownload } from '../services/downloader.js';
-import { getEffectiveMediaDir } from '../settings.js';
+import { resolveTrackFile } from '../settings.js';
 import { getStreamUrl, downloadProgress } from '../services/external.js';
 import { HttpError, parseId } from '../http.js';
 
@@ -49,16 +51,16 @@ tracksRouter.post('/:id/download', (req, res) => {
 tracksRouter.delete('/:id', async (req, res) => {
   const id = parseId(req.params.id);
   if (!repo.getTrack(id)) throw new HttpError(404, 'Faixa não encontrada');
-  const { filePath } = repo.deleteTrack(id);
+  const filePath = resolveTrackFile(repo.deleteTrack(id).filePath);
   if (filePath) await fsp.rm(filePath, { force: true });
   res.status(204).end();
 });
 
 async function trackFileExists(id: number): Promise<boolean> {
-  const file = repo.getTrackFile(id);
-  if (!file?.file_path) return false;
+  const filePath = resolveTrackFile(repo.getTrackFile(id)?.file_path);
+  if (!filePath) return false;
   try {
-    await fsp.access(path.join(getEffectiveMediaDir(), file.file_path));
+    await fsp.access(filePath);
     return true;
   } catch {
     return false;
@@ -80,31 +82,54 @@ tracksRouter.get('/:id/progress', async (req, res) => {
   res.json({ percent, status: track.downloadStatus });
 });
 
+/** Limita processos simultâneos do yt-dlp disparados por streaming. */
+const MAX_CONCURRENT_STREAMS = 3;
+let activeStreams = 0;
+
 tracksRouter.get('/:id/stream-url', async (req, res) => {
   const id = parseId(req.params.id);
   const track = repo.getTrack(id);
   if (!track) throw new HttpError(404, 'Faixa não encontrada');
-  const url = await getStreamUrl({ id, title: track.title, artistName: track.artistName });
-  if (!url) throw new HttpError(502, 'Não foi possível obter o stream da fonte externa');
+  if (activeStreams >= MAX_CONCURRENT_STREAMS) throw new HttpError(429, 'Muitos streams simultâneos, tente novamente');
+
+  activeStreams++;
+  let released = false;
+  const release = () => {
+    if (!released) {
+      released = true;
+      activeStreams--;
+    }
+  };
+  res.on('close', release);
 
   try {
-    const upstream = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-    if (!upstream.ok || !upstream.body) throw new Error('upstream failed');
-    res.setHeader('Content-Type', upstream.headers.get('content-type') ?? 'audio/mpeg');
-    res.setHeader('Accept-Ranges', 'bytes');
-    const reader = upstream.body.getReader();
-    const pump = async () => {
-      const { done, value } = await reader.read();
-      if (done) {
-        res.end();
-        return;
-      }
-      res.write(Buffer.from(value));
-      await pump();
-    };
-    pump().catch(() => res.destroy());
-  } catch {
-    throw new HttpError(502, 'Não foi possível reproduzir o stream da fonte externa');
+    const url = await getStreamUrl({ id, title: track.title, artistName: track.artistName });
+    if (!url) throw new HttpError(502, 'Não foi possível obter o stream da fonte externa');
+
+    const abort = new AbortController();
+    res.on('close', () => abort.abort());
+
+    let upstream: globalThis.Response;
+    try {
+      upstream = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: abort.signal });
+    } catch {
+      throw new HttpError(502, 'Não foi possível reproduzir o stream da fonte externa');
+    }
+    if (!upstream.ok || !upstream.body) throw new HttpError(502, 'Não foi possível reproduzir o stream da fonte externa');
+
+    // Só repassa tipos de áudio; qualquer outra coisa vira audio/mpeg.
+    const type = upstream.headers.get('content-type') ?? '';
+    res.setHeader('Content-Type', /^audio\/[\w.+-]+$/i.test(type.split(';')[0].trim()) ? type : 'audio/mpeg');
+    const length = upstream.headers.get('content-length');
+    if (length && /^\d+$/.test(length)) res.setHeader('Content-Length', length);
+
+    // pipe respeita backpressure; erros/desconexões encerram os dois lados.
+    const body = Readable.fromWeb(upstream.body as unknown as WebReadableStream);
+    body.on('error', () => res.destroy());
+    body.pipe(res);
+  } catch (err) {
+    release();
+    throw err;
   }
 });
 
@@ -115,7 +140,8 @@ tracksRouter.get('/:id/stream', async (req, res) => {
     throw new HttpError(409, 'Faixa ainda não disponível');
   }
 
-  const filePath = file.file_path;
+  const filePath = resolveTrackFile(file.file_path);
+  if (!filePath) throw new HttpError(404, 'Arquivo de áudio não encontrado');
   const size = await fsp.stat(filePath).then((s) => s.size).catch(() => -1);
   if (size < 0) throw new HttpError(404, 'Arquivo de áudio não encontrado');
 

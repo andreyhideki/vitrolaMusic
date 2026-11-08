@@ -10,6 +10,11 @@ export const config = {
   importDir: path.resolve(process.env.IMPORT_DIR ?? path.join(dataDir, 'import')),
   dbFile: path.join(dataDir, 'vitrola.db'),
   corsOrigin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
+  /** Hosts (nomes, sem porta) aceitos no header Host, além de IPs literais.
+   *  ALLOWED_HOSTS acrescenta nomes extras, separados por vírgula (ex.: meupc.local). */
+  allowedHosts: ['localhost', 'api', ...(process.env.ALLOWED_HOSTS ?? '').split(',')]
+    .map((h) => h.trim().toLowerCase())
+    .filter(Boolean),
 };
 
 fs.mkdirSync(config.mediaDir, { recursive: true });

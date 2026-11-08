@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { api, AppSettings, errorMessage, send } from '../api';
+import { useAuth } from '../auth';
 
 interface Props {
   open: boolean;
@@ -19,6 +20,7 @@ const CLEANUP_OPTIONS: { value: number; label: string }[] = [
 ];
 
 export function SettingsModal({ open, onClose }: Props) {
+  const authDisabled = useAuth((s) => s.disabled);
   const [settings, setSettings] = useState<AppSettings>({
     audioQuality: 'medium',
     mediaDir: '',
@@ -50,9 +52,12 @@ export function SettingsModal({ open, onClose }: Props) {
     setLoading(true);
     setError('');
     try {
+      // Só envia cookies quando o usuário colou/carregou algo: string vazia remove
+      // os cookies no backend, e isso tem botão próprio (removeCookies).
+      const { youtubeCookiesPath: _ignored, ...rest } = settings;
       const s = await send<AppSettings>('POST', '/settings', {
-        ...settings,
-        youtubeCookiesContent: cookiesText,
+        ...rest,
+        ...(cookiesText.trim() ? { youtubeCookiesContent: cookiesText } : {}),
       });
       setSettings(s);
       setCookiesText('');
@@ -75,12 +80,30 @@ export function SettingsModal({ open, onClose }: Props) {
     }
   }
 
-  function handleCookiesFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    const fileName = files[0].name;
-    if (fileName) {
-      setSettings((prev) => ({ ...prev, youtubeCookiesPath: `/app/data/${fileName}` }));
+  /** Carrega o conteúdo do cookies.txt exportado direto no campo de texto. */
+  async function handleCookiesFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (file.size > 1024 * 1024) {
+      setError('Arquivo de cookies muito grande (máx. 1 MB)');
+      return;
+    }
+    setError('');
+    setCookiesText(await file.text());
+  }
+
+  async function removeCookies() {
+    setLoading(true);
+    setError('');
+    try {
+      const s = await send<AppSettings>('POST', '/settings', { youtubeCookiesContent: '' });
+      setSettings(s);
+      setCookiesText('');
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -141,7 +164,7 @@ export function SettingsModal({ open, onClose }: Props) {
                 type="text"
                 value={settings.mediaDir}
                 onChange={(e) => setSettings({ ...settings, mediaDir: e.target.value })}
-                placeholder="Padrão: data/media"
+                placeholder="Padrão: media (relativo à pasta data/)"
               />
               <button
                 type="button"
@@ -171,6 +194,23 @@ export function SettingsModal({ open, onClose }: Props) {
                 "3) Abra o arquivo .txt, copie todo o conteúdo e cole aqui.\n" +
                 "O Vitrola salvará automaticamente o arquivo no container."}
             />
+            <div className="folder-input">
+              <button type="button" className="small" onClick={() => cookiesFileInputRef.current?.click()}>
+                Carregar arquivo .txt
+              </button>
+              {settings.youtubeCookiesPath && (
+                <button type="button" className="small danger" onClick={removeCookies} disabled={loading}>
+                  Remover cookies
+                </button>
+              )}
+              <input
+                ref={cookiesFileInputRef}
+                type="file"
+                accept=".txt,text/plain"
+                style={{ display: 'none' }}
+                onChange={handleCookiesFileSelect}
+              />
+            </div>
             {settings.youtubeCookiesPath && cookiesText === '' && (
               <p className="success">Cookies configurados.</p>
             )}
@@ -224,6 +264,23 @@ export function SettingsModal({ open, onClose }: Props) {
                   se houver muitos downloads automatizados. Use por sua conta e risco.
                 </div>
               </div>
+            )}
+          </div>
+
+          <div className="form-group">
+            <label>Acesso</label>
+            <p className="hint">
+              Para usar no celular, defina <code>VITROLA_BIND=0.0.0.0</code> no arquivo <code>.env</code> da
+              raiz, rode <code>make up</code> e abra <code>http://IP-deste-computador:5173</code>. O token é
+              exibido com <code>make token</code>. No Android, permita <strong>Dispositivos próximos / Rede
+              local</strong> nas permissões do navegador; sem isso aparece <code>ERR_TOO_MANY_RETRIES</code>.
+            </p>
+            {authDisabled ? (
+              <p className="error">Autenticação desativada (AUTH_DISABLED=true). Use só para testes.</p>
+            ) : (
+              <button type="button" className="small danger" onClick={() => useAuth.getState().logout()}>
+                Sair deste aparelho
+              </button>
             )}
           </div>
 

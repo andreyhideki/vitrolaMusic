@@ -3,6 +3,26 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { db } from './db.js';
 import { config } from './config.js';
+import { HttpError } from './http.js';
+
+/** Caminho fixo do arquivo de cookies. Nunca aceitamos caminho vindo do cliente:
+ *  o yt-dlp lê E regrava o arquivo passado em --cookies. */
+export const COOKIES_FILE = path.join(config.dataDir, 'youtube-cookies.txt');
+
+// Corrige permissões de arquivos de cookies criados por versões anteriores (0644).
+try {
+  fs.chmodSync(COOKIES_FILE, 0o600);
+} catch {
+  // arquivo ainda não existe
+}
+
+/** Resolve `mediaDir` (relativo a DATA_DIR) e garante que fique dentro de DATA_DIR. */
+function resolveMediaDir(dir: string): string | null {
+  const resolved = path.resolve(config.dataDir, dir);
+  const rel = path.relative(config.dataDir, resolved);
+  if (rel === '' || rel.startsWith('..') || path.isAbsolute(rel)) return null;
+  return resolved;
+}
 
 export type AudioQuality = 'low' | 'medium' | 'high';
 
@@ -48,32 +68,33 @@ export function getSettings(): AppSettings {
     mediaDir: get('mediaDir') || DEFAULTS.mediaDir,
     streamWithoutDownload: boolOf(get('streamWithoutDownload'), DEFAULTS.streamWithoutDownload),
     cleanupUnusedAfterDays: numberOf(get('cleanupUnusedAfterDays'), DEFAULTS.cleanupUnusedAfterDays),
-    youtubeCookiesPath: get('youtubeCookiesPath') || DEFAULTS.youtubeCookiesPath,
+    youtubeCookiesPath: get('youtubeCookiesPath') ? COOKIES_FILE : DEFAULTS.youtubeCookiesPath,
   };
 }
 
-export function updateSettings(s: Partial<AppSettings> & { youtubeCookiesContent?: string }): AppSettings {
-  if (s.audioQuality !== undefined) set('audioQuality', s.audioQuality);
+export async function updateSettings(s: Partial<Omit<AppSettings, 'youtubeCookiesPath'>> & { youtubeCookiesContent?: string }): Promise<AppSettings> {
   if (s.mediaDir !== undefined) {
     const dir = s.mediaDir.trim();
+    const resolved = dir ? resolveMediaDir(dir) : null;
+    if (dir && !resolved) throw new HttpError(400, 'A pasta de mídia deve ficar dentro da pasta de dados (data/)');
+    if (resolved) fs.mkdirSync(resolved, { recursive: true });
     set('mediaDir', dir);
-    if (dir) fs.mkdirSync(dir, { recursive: true });
   }
+  if (s.audioQuality !== undefined) set('audioQuality', s.audioQuality);
   if (s.streamWithoutDownload !== undefined) set('streamWithoutDownload', s.streamWithoutDownload ? '1' : '0');
   if (s.cleanupUnusedAfterDays !== undefined) set('cleanupUnusedAfterDays', String(Math.floor(s.cleanupUnusedAfterDays)));
 
   if (s.youtubeCookiesContent !== undefined) {
     const content = s.youtubeCookiesContent.trim();
-    const cookiesFile = path.join(config.dataDir, 'youtube-cookies.txt');
     if (content) {
-      fsp.writeFile(cookiesFile, content, 'utf-8').catch(() => {});
-      set('youtubeCookiesPath', cookiesFile);
+      // 0600: o arquivo contém credenciais da conta Google.
+      await fsp.writeFile(COOKIES_FILE, content, { encoding: 'utf-8', mode: 0o600 });
+      await fsp.chmod(COOKIES_FILE, 0o600);
+      set('youtubeCookiesPath', COOKIES_FILE);
     } else {
-      fsp.rm(cookiesFile, { force: true }).catch(() => {});
+      await fsp.rm(COOKIES_FILE, { force: true });
       set('youtubeCookiesPath', '');
     }
-  } else if (s.youtubeCookiesPath !== undefined) {
-    set('youtubeCookiesPath', s.youtubeCookiesPath.trim());
   }
 
   return getSettings();
@@ -87,9 +108,27 @@ export function audioQualityArg(quality: AudioQuality): string {
   }
 }
 
+const AUDIO_FILE_EXT = new Set(['.mp3', '.m4a', '.flac', '.ogg', '.opus', '.wav']);
+
+/**
+ * Converte o `file_path` salvo no banco em caminho absoluto. Aceita caminhos
+ * absolutos (formato atual) e relativos à pasta de mídia (formato antigo).
+ * Retorna null se o arquivo estiver fora de DATA_DIR ou não for áudio, para que nenhuma rota
+ * leia ou apague arquivos fora da área de dados.
+ */
+export function resolveTrackFile(filePath: string | null | undefined): string | null {
+  if (!filePath) return null;
+  const abs = path.isAbsolute(filePath) ? path.resolve(filePath) : path.resolve(getEffectiveMediaDir(), filePath);
+  const rel = path.relative(config.dataDir, abs);
+  if (rel === '' || rel.startsWith('..') || path.isAbsolute(rel)) return null;
+  if (!AUDIO_FILE_EXT.has(path.extname(abs).toLowerCase())) return null;
+  return abs;
+}
+
 export function getEffectiveMediaDir(): string {
   const configured = getSettings().mediaDir;
-  const dir = configured ? path.resolve(configured) : config.mediaDir;
+  // Valor inválido (fora de DATA_DIR) salvo por versões antigas cai no padrão.
+  const dir = (configured && resolveMediaDir(configured)) || config.mediaDir;
   fs.mkdirSync(dir, { recursive: true });
   return dir;
 }

@@ -6,12 +6,19 @@ services:
     build: ./api
     image: vitrola-api:dev
     ports:
-      - "5172:5172"
+      # A API fica só em loopback: outros aparelhos acessam pelo proxy /api do frontend.
+      - "127.0.0.1:5172:5172"
     environment:
       PORT: 5172
       DATA_DIR: /app/data
       IMPORT_DIR: /app/data/import
       CORS_ORIGIN: http://localhost:5173
+      # Nomes extras aceitos no header Host (IPs já são aceitos). Ex.: meupc.local
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-}
+      # Opcional: define o token de acesso. Sem ele, um token é gerado em ./data/auth-token.txt
+      AUTH_TOKEN: ${AUTH_TOKEN:-}
+      # true desliga a autenticação (só para testes locais; nunca com VITROLA_BIND=0.0.0.0)
+      AUTH_DISABLED: ${AUTH_DISABLED:-false}
     volumes:
       - ./api:/app
       - api_node_modules:/app/node_modules
@@ -23,10 +30,13 @@ services:
     build: ./frontend
     image: vitrola-web:dev
     ports:
-      - "5173:5173"
+      # Padrão: só este computador. Para usar no celular/rede, defina
+      # VITROLA_BIND=0.0.0.0 no arquivo .env da raiz (o acesso exige o token).
+      - "${VITROLA_BIND:-127.0.0.1}:5173:5173"
     environment:
       # Destino do proxy /api do Vite, dentro da rede do compose
       API_TARGET: http://api:5172
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-}
       # Necessário para hot reload em bind mounts (macOS e Windows)
       CHOKIDAR_USEPOLLING: "true"
     volumes:

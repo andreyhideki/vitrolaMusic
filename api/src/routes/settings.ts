@@ -7,14 +7,13 @@ settingsRouter.get('/', (_req, res) => {
   res.json(getSettings());
 });
 
-settingsRouter.post('/', (req, res) => {
-  const { audioQuality, mediaDir, streamWithoutDownload, cleanupUnusedAfterDays, youtubeCookiesPath, youtubeCookiesContent } = req.body ?? {};
+settingsRouter.post('/', async (req, res) => {
+  const { audioQuality, mediaDir, streamWithoutDownload, cleanupUnusedAfterDays, youtubeCookiesContent } = req.body ?? {};
   const updates: Partial<{
     audioQuality: 'low' | 'medium' | 'high';
     mediaDir: string;
     streamWithoutDownload: boolean;
     cleanupUnusedAfterDays: number;
-    youtubeCookiesPath: string;
     youtubeCookiesContent: string;
   }> = {};
   if (audioQuality === 'low' || audioQuality === 'medium' || audioQuality === 'high') {
@@ -29,11 +28,8 @@ settingsRouter.post('/', (req, res) => {
   if (typeof cleanupUnusedAfterDays === 'number' && Number.isFinite(cleanupUnusedAfterDays) && cleanupUnusedAfterDays >= 0) {
     updates.cleanupUnusedAfterDays = cleanupUnusedAfterDays;
   }
-  if (typeof youtubeCookiesPath === 'string') {
-    updates.youtubeCookiesPath = youtubeCookiesPath;
-  }
   if (typeof youtubeCookiesContent === 'string') {
     updates.youtubeCookiesContent = youtubeCookiesContent;
   }
-  res.json(updateSettings(updates));
+  res.json(await updateSettings(updates));
 });

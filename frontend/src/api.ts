@@ -1,3 +1,5 @@
+import { useAuth } from './auth';
+
 export type DownloadStatus = 'pending' | 'downloading' | 'ready' | 'failed';
 
 export interface TrackDto {
@@ -118,6 +120,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     headers: { 'Content-Type': 'application/json' },
   });
   const data = await res.json().catch(() => ({}));
+  if (res.status === 401) useAuth.getState().expired();
   if (!res.ok) throw new Error((data as { error?: string }).error ?? `Erro ${res.status}`);
   return data as T;
 }

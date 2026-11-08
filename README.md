@@ -78,6 +78,44 @@ cd frontend && npm run dev         # http://localhost:5173
 | `DATA_DIR` | `./data` | Banco SQLite e pasta de mídia |
 | `IMPORT_DIR` | `./data/import` | Pasta onde você coloca os arquivos de áudio que possui |
 | `CORS_ORIGIN` | `http://localhost:5173` | Origem permitida no CORS |
+| `ALLOWED_HOSTS` | _(vazio)_ | Nomes extras aceitos no header `Host`, além de IPs, `localhost` e `api` (proteção contra DNS rebinding) |
+| `AUTH_TOKEN` | _(gerado)_ | Token de acesso. Se vazio, é gerado em `./data/auth-token.txt` |
+| `AUTH_DISABLED` | `false` | `true` desliga a autenticação (só para testes locais; nunca com `VITROLA_BIND=0.0.0.0`) |
+| `VITROLA_BIND` | `127.0.0.1` | Interface onde o frontend é publicado pelo Docker (`0.0.0.0` = rede) |
+
+### Acesso e uso no celular
+
+O Vitrola exige um **token de acesso**. Na primeira execução ele é gerado em `./data/auth-token.txt`; veja com:
+
+```bash
+make token
+```
+
+Por padrão o app só é acessível neste computador. Para usar no celular (mesma rede Wi-Fi):
+
+1. Crie um `.env` na raiz (modelo em `.env.example`) com `VITROLA_BIND=0.0.0.0` e rode `make up`.
+2. **Android:** libere o acesso à rede local para o navegador (veja abaixo). Sem isso a página não abre.
+3. No celular, abra `http://IP-DO-COMPUTADOR:5173` e digite o token. Atalho: `http://IP-DO-COMPUTADOR:5173/#token=SEU-TOKEN` faz login direto.
+4. A sessão dura 1 ano por aparelho. Para revogar todas, apague `./data/auth-token.txt` (ou troque `AUTH_TOKEN`) e reinicie a API.
+
+Scripts podem usar `Authorization: Bearer <token>`.
+
+#### Android: permissão de rede local (obrigatória)
+
+Nas versões recentes do Android, os apps precisam da permissão **"Dispositivos próximos"** (ou **"Rede local"**) para acessar endereços da rede de casa (`192.168.x.x`). Sem ela, o Chrome bloqueia a conexão antes de sair do celular e mostra **`ERR_TOO_MANY_RETRIES`** (ou `ERR_LOCAL_NETWORK_PERMISSION_MISSING`), inclusive na página do roteador.
+
+1. Pressione e segure o ícone do **Chrome** → **Informações do app** (ou Configurações → Apps → Chrome).
+2. **Permissões** → **Dispositivos próximos** / **Rede local** → **Permitir**.
+3. Feche o Chrome por completo (remova dos apps recentes) e abra de novo.
+
+Vale o mesmo para outros navegadores. O Firefox costuma pedir essa permissão na primeira vez que você abre um endereço local.
+
+#### Se ainda não abrir no celular
+
+- Use o IP **de rede do computador** (no Windows, `ipconfig` → "Endereço IPv4" da Ethernet/Wi-Fi), com `http://` explícito.
+- Celular e computador precisam estar na mesma rede (não use rede de convidados), sem VPN ativa no celular (Tailscale com exit node, Cloudflare WARP, bloqueadores de anúncio em modo VPN etc.) e sem proxy no Wi-Fi.
+- Teste `http://IP-DO-COMPUTADOR:5173/api/health`: se responder `{"ok":true}`, a rede está funcionando.
+- **WSL2 + Docker Desktop:** o Docker Desktop já publica a porta no Windows (`0.0.0.0:5173`), não é preciso `portproxy`. Se o Firewall do Windows estiver ativo, libere a porta 5173 para a rede em uso. A Ethernet costuma ficar no perfil **Público**, que bloqueia conexões de entrada.
 
 ### Cookies do YouTube (opcional)
 

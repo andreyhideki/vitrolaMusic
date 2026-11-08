@@ -914,3 +914,24 @@ body.theme-light .warning-box { background: #ff6b6b18; color: #b53b3b; }
   font-size: 48px;
   margin-bottom: 8px;
 }
+
+/* Tela de login (token de acesso) */
+.login-screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+}
+.login-box { width: 100%; max-width: 380px; text-align: center; }
+.login-box .form-group input {
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  font-family: ui-monospace, monospace;
+  letter-spacing: 1px;
+  font-size: 16px; /* evita zoom automático no iOS */
+}
+.login-box .modal-actions { justify-content: center; }
+.login-logo { width: 64px; height: 64px; }
