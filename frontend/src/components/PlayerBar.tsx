@@ -3,6 +3,7 @@ import { usePlayerStore } from '../player/store';
 import { usePlayback } from '../player/playback';
 import { playerControls } from '../player/usePlayerAudio';
 import { useLibrary } from '../library';
+import { useNav } from '../nav';
 import { fmtBitrate, fmtTime } from '../format';
 
 export function PlayerBar() {
@@ -14,6 +15,14 @@ export function PlayerBar() {
   const [volume, setVolume] = useState(1);
   const [muted, setMuted] = useState(false);
   const lastVolume = useRef(1);
+  const source = usePlayerStore((s) => s.source);
+  const go = useNav((s) => s.go);
+
+  // Vai para a origem do que está tocando (playlist/álbum/lista); sem origem, abre o álbum da faixa.
+  const target = source ?? (track ? { kind: 'album' as const, id: track.albumId } : null);
+  const openSource = () => {
+    if (target) go(target);
+  };
 
   useEffect(() => {
     playerControls.setVolume(muted ? 0 : volume);
@@ -24,7 +33,19 @@ export function PlayerBar() {
 
   return (
     <footer className="player">
-      <div className="now">
+      <div
+        className={`now ${target ? 'clickable' : ''}`}
+        role={target ? 'button' : undefined}
+        tabIndex={target ? 0 : undefined}
+        title={target ? 'Ir para o que está tocando' : undefined}
+        onClick={openSource}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            openSource();
+          }
+        }}
+      >
         {track?.coverUrl && <img src={track.coverUrl} alt="" />}
         <div style={{ minWidth: 0 }}>
           <div className="title">{track?.title ?? 'Nada tocando'}</div>
