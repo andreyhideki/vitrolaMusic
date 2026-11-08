@@ -172,15 +172,17 @@ export function LibraryView() {
           >
             Aleatório
           </button>
-          <a
-            className="buy-me-a-coffee"
-            href={BUY_ME_A_COFFEE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Buy me a coffee"
-          >
-            ☕ Buy me a coffee
-          </a>
+          {BUY_ME_A_COFFEE_URL && (
+            <a
+              className="buy-me-a-coffee"
+              href={BUY_ME_A_COFFEE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Buy me a coffee"
+            >
+              ☕ Buy me a coffee
+            </a>
+          )}
         </div>
       </div>
 

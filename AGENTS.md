@@ -102,4 +102,5 @@
 - Valide alterações de tipo com `make typecheck` antes de considerar a tarefa pronta.
 - Não confie cegamente em `download_status = 'ready'`: verifique a existência do arquivo no disco quando o status afetar a UI.
 - Mantenha este `AGENTS.md` atualizado conforme novas features, regras ou gotchas forem descobertos.
+- Configuração do frontend via variáveis em `frontend/.env` (ignorado pelo git; modelo em `frontend/.env.example`, tipagem em `frontend/src/vite-env.d.ts`). O `vite.config.ts` expõe os prefixos `VITE_` e `URL_` (`envPrefix`). `URL_BUY_ME_A_COFFEE` define o link de apoio; se vazio, o botão some do menu e da home. Valores com esses prefixos vão para o bundle do navegador: nunca coloque segredos neles. Após alterar o `.env` ou o `vite.config.ts`, reinicie o container `web`.
 - O Service Worker do PWA está habilitado também em desenvolvimento (`devOptions.enabled: true`). Se comportamentos estranhos de cache atrapalharem o hot reload, desabilite temporariamente no `vite.config.ts` ou use uma aba anônima.

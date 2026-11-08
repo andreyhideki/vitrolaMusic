@@ -7,6 +7,8 @@ import { VitePWA } from 'vite-plugin-pwa';
 const apiTarget = process.env.API_TARGET ?? 'http://localhost:5172';
 
 export default defineConfig({
+  // URL_* também é exposto ao navegador (ex.: URL_BUY_ME_A_COFFEE). Nunca use esses prefixos para segredos.
+  envPrefix: ['VITE_', 'URL_'],
   plugins: [
     react(),
     VitePWA({
