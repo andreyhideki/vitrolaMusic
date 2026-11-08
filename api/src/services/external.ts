@@ -31,6 +31,16 @@ async function downloaderAvailable(): Promise<boolean> {
   }
 }
 
+/**
+ * Resume o stderr do yt-dlp para uma mensagem curta, sem caminhos internos.
+ * O stderr completo vai para o log do servidor; o resumo vai para o banco/cliente.
+ */
+function summarizeError(stderr: string): string {
+  const lines = stderr.split('\n').map((l) => l.trim()).filter(Boolean);
+  const line = [...lines].reverse().find((l) => l.startsWith('ERROR:')) ?? lines[lines.length - 1] ?? '';
+  return line.replace(/(?:\/[\w.\-]+)+/g, '<caminho>').slice(0, 300);
+}
+
 function parsePercent(line: string): number | null {
   const m = /(\d{1,3}(?:\.\d+)?)%/.exec(line);
   if (!m) return null;
@@ -115,8 +125,12 @@ function runDownloader(trackId: number, out: string, quality: string, query: str
 
     proc.on('error', reject);
     proc.on('close', (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(stderr || `Ferramenta de download saiu com código ${code}`));
+      if (code === 0) {
+        resolve();
+        return;
+      }
+      if (stderr) console.error(`[yt-dlp] faixa ${trackId}:`, stderr.trim());
+      reject(new Error(summarizeError(stderr) || `Ferramenta de download saiu com código ${code}`));
     });
   });
 }

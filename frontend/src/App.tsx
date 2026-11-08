@@ -6,6 +6,8 @@ import { useUi } from './ui';
 import { usePlayerStore } from './player/store';
 import { PlayerAudioConfig, usePlayerAudio } from './player/usePlayerAudio';
 import { useTheme } from './theme';
+import { takeTokenFromUrl, useAuth } from './auth';
+import { LoginView } from './views/LoginView';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { PlayerBar } from './components/PlayerBar';
@@ -44,13 +46,35 @@ function Main({ view }: { view: View }) {
 let streamWithoutDownload = false;
 
 export function App() {
-  const [settingsLoaded, setSettingsLoaded] = useState(false);
   const theme = useTheme((s) => s.theme);
+  const status = useAuth((s) => s.status);
+  const [loginError, setLoginError] = useState('');
 
   useEffect(() => {
     document.body.classList.remove('theme-dark', 'theme-light');
     document.body.classList.add(`theme-${theme}`);
   }, [theme]);
+
+  useEffect(() => {
+    const { check, login } = useAuth.getState();
+    const fromUrl = takeTokenFromUrl();
+    if (!fromUrl) {
+      void check();
+      return;
+    }
+    login(fromUrl).catch((err) => {
+      setLoginError(err instanceof Error ? err.message : String(err));
+      void check();
+    });
+  }, []);
+
+  if (status === 'unknown') return null;
+  if (status === 'unauthenticated') return <LoginView initialError={loginError} />;
+  return <AuthenticatedApp />;
+}
+
+function AuthenticatedApp() {
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   useEffect(() => {
     api<AppSettings>('/settings')

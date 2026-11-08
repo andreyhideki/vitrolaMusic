@@ -1,17 +1,17 @@
 import { Router } from 'express';
 import fsp from 'node:fs/promises';
-import path from 'node:path';
 import * as repo from '../repo.js';
 import { catalogApi } from '../services/catalogApi.js';
-import { getEffectiveMediaDir } from '../settings.js';
+import { resolveTrackFile } from '../settings.js';
 import { HttpError, parseId } from '../http.js';
 
 export const catalogRouter = Router();
 
-async function fileExists(filePath: string | null): Promise<boolean> {
+async function fileExists(stored: string | null): Promise<boolean> {
+  const filePath = resolveTrackFile(stored);
   if (!filePath) return false;
   try {
-    await fsp.access(path.join(getEffectiveMediaDir(), filePath));
+    await fsp.access(filePath);
     return true;
   } catch {
     return false;
@@ -79,7 +79,8 @@ catalogRouter.delete('/albums/:id', async (req, res) => {
   const id = parseId(req.params.id);
   if (!repo.getAlbum(id)) throw new HttpError(404, 'Álbum não encontrado');
   const { filePaths } = repo.deleteAlbum(id);
-  await Promise.all(filePaths.map((p) => fsp.rm(p, { force: true })));
+  const safe = filePaths.map(resolveTrackFile).filter((p): p is string => !!p);
+  await Promise.all(safe.map((p) => fsp.rm(p, { force: true })));
   res.status(204).end();
 });
 

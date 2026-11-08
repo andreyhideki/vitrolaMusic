@@ -5,6 +5,8 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 // Em Docker, API_TARGET aponta para o serviço "api". Localmente, usa localhost.
 const apiTarget = process.env.API_TARGET ?? 'http://localhost:5172';
+// Nomes extras aceitos pelo dev server (IPs e localhost já são aceitos). Ex.: meupc.local
+const allowedHosts = (process.env.ALLOWED_HOSTS ?? '').split(',').map((h) => h.trim()).filter(Boolean);
 
 export default defineConfig({
   // URL_* também é exposto ao navegador (ex.: URL_BUY_ME_A_COFFEE). Nunca use esses prefixos para segredos.
@@ -40,6 +42,7 @@ export default defineConfig({
   server: {
     host: true, // escuta em 0.0.0.0, necessário dentro do container
     port: 5173,
+    allowedHosts,
     proxy: { '/api': apiTarget },
   },
   test: { environment: 'node' },
