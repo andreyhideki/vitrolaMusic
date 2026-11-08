@@ -122,7 +122,7 @@ export function AlbumCarousel({ albums, albumTrackIds, currentAlbumId, playing, 
                     if (isCurrentAlbum) {
                       playerControls.togglePlay();
                     } else {
-                      playerControls.playPlaylist(ids, false);
+                      playerControls.playPlaylist(ids, false, { kind: 'album', id: a.id });
                     }
                   }}
                   aria-label={isCurrentAlbum ? `Pausar álbum ${a.title}` : `Tocar álbum ${a.title}`}

@@ -616,6 +616,14 @@ button.small { padding: 4px 10px; font-size: 12px; }
 .track select { max-width: 150px; }
 .track .track-actions { display: contents; }
 .track .more-toggle { display: none; }
+.track .drag-handle {
+  background: none; border: none; padding: 4px 2px; color: var(--muted, #888);
+  cursor: grab; touch-action: none; font-size: 14px; letter-spacing: -2px; line-height: 1;
+}
+.track .drag-handle:active { cursor: grabbing; }
+.track.dragging { background: var(--hover-bg); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35); }
+.now.clickable { cursor: pointer; border-radius: 6px; }
+.now.clickable:hover .title { text-decoration: underline; }
 
 .status.pending, .status.downloading { color: #f0b429; font-size: 12px; }
 .status.ready { color: var(--accent); font-size: 12px; }

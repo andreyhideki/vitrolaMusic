@@ -86,9 +86,10 @@
 - Capas de álbum na página inicial têm botão de play em destaque (borda verde) que toca o álbum; vira pause (borda vermelha) quando o álbum está sendo reproduzido.
 - Importação de faixas e álbuns do catálogo externo, com enfileiramento automático de downloads.
 - Player com fila, shuffle, repeat, "tocar a seguir", "adicionar à fila", Media Session, pré-carregamento da próxima faixa e persistência de volume entre faixas.
-- Playlists: criar, editar, excluir, adicionar/remover/reordenar faixas, buscar músicas na biblioteca para adicionar e sugestões por gênero (até 10 faixas).
+- Playlists: criar, editar, excluir, adicionar/remover faixas, reordenar arrastando pela alça ⋮⋮ (`@dnd-kit/sortable`; mouse, toque com 150 ms de espera e teclado; atualização otimista + `PATCH /playlists/:id/order`), buscar músicas na biblioteca para adicionar e sugestões por gênero (até 10 faixas).
 - Tela de álbum (`frontend/src/views/AlbumView.tsx`) mostrando faixas baixadas e não baixadas, com botão "Importar" e barra de progresso do download.
 - Pré-visualização de álbum (`frontend/src/views/AlbumPreviewView.tsx`) com importação individual, importação do álbum inteiro e barra de progresso do download.
+- Clicar na faixa atual do player (`PlayerBar`) abre a origem do que está tocando: `playFrom`/`playPlaylist` recebem um `source: View` opcional, salvo em `usePlayerStore().source` (persistido). Sem origem, abre o álbum da faixa. Ao adicionar novos pontos de reprodução, passe o `source`.
 - Controle de volume funcional (mute/unmute + slider).
 - Histórico das últimas 10 buscas, persistido em `localStorage`.
 - Endpoint `GET /api/tracks/:id/progress` retorna percentual e status do download, também verificando a existência real do arquivo no disco.

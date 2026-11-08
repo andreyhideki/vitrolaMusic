@@ -1,10 +1,33 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { CSSProperties, FormEvent, ReactNode, useEffect, useState } from 'react';
+import { closestCenter, DndContext, DragEndEvent, KeyboardSensor, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { api, errorMessage, PlaylistDetail, send, TrackDto } from '../api';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { useLibrary } from '../library';
 import { useNav } from '../nav';
 import { playerControls } from '../player/usePlayerAudio';
 import { fmtBitrate, fmtDuration, STATUS_LABEL } from '../format';
+
+/** Linha da playlist reordenável por arrastar (pela alça ⋮⋮). */
+function SortableRow({ id, className, children }: { id: number; className: string; children: ReactNode }) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style: CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : undefined,
+    position: 'relative',
+    zIndex: isDragging ? 1 : undefined,
+  };
+  return (
+    <li ref={setNodeRef} style={style} className={`${className} ${isDragging ? 'dragging' : ''}`}>
+      <button ref={setActivatorNodeRef} className="drag-handle" aria-label="Arrastar para reordenar" title="Arrastar para reordenar" {...attributes} {...listeners}>
+        ⋮⋮
+      </button>
+      {children}
+    </li>
+  );
+}
 
 interface PlaylistViewState {
   query: string;
@@ -22,6 +45,11 @@ export function PlaylistView({ id }: { id: number }) {
   const [suggestions, setSuggestions] = useState<TrackDto[]>([]);
   const [adding, setAdding] = useState<Set<number>>(new Set());
   const go = useNav((s) => s.go);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
   const byId = useLibrary((s) => s.byId);
 
   async function load() {
@@ -73,13 +101,17 @@ export function PlaylistView({ id }: { id: number }) {
     }
   }
 
-  const move = (i: number, dir: -1 | 1) => {
-    const j = i + dir;
-    if (j < 0 || j >= entries.length) return;
-    const order = entries.map((e) => e.entryId);
-    [order[i], order[j]] = [order[j], order[i]];
-    run(() => send('PATCH', `/playlists/${id}/order`, { entryIds: order }));
-  };
+  const source = { kind: 'playlist' as const, id };
+
+  function onDragEnd({ active, over }: DragEndEvent) {
+    if (!over || active.id === over.id || !detail) return;
+    const from = entries.findIndex((e) => e.entryId === active.id);
+    const to = entries.findIndex((e) => e.entryId === over.id);
+    if (from < 0 || to < 0) return;
+    const reordered = arrayMove(entries, from, to);
+    setDetail({ ...detail, entries: reordered }); // otimista: evita a linha "pular" de volta
+    run(() => send('PATCH', `/playlists/${id}/order`, { entryIds: reordered.map((e) => e.entryId) }));
+  }
 
   const remove = (entryId: number) => run(() => send('DELETE', `/playlists/${id}/entries/${entryId}`));
 
@@ -137,10 +169,10 @@ export function PlaylistView({ id }: { id: number }) {
       </div>
 
       <div className="actions">
-        <button className="primary" disabled={entries.length === 0} onClick={() => playerControls.playPlaylist(ids, false)}>
+        <button className="primary" disabled={entries.length === 0} onClick={() => playerControls.playPlaylist(ids, false, source)}>
           Tocar
         </button>
-        <button disabled={entries.length === 0} onClick={() => playerControls.playPlaylist(ids, true)}>
+        <button disabled={entries.length === 0} onClick={() => playerControls.playPlaylist(ids, true, source)}>
           Aleatório
         </button>
         <button onClick={askDeletePlaylist}>Excluir playlist</button>
@@ -150,13 +182,15 @@ export function PlaylistView({ id }: { id: number }) {
 
       {entries.length === 0 && <p className="muted">Adicione faixas pela busca abaixo ou pela tela do álbum.</p>}
 
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+      <SortableContext items={entries.map((e) => e.entryId)} strategy={verticalListSortingStrategy}>
       <ol className="tracks">
         {entries.map((e, i) => {
           const t = byId[String(e.track.id)] ?? e.track;
           const ready = t.downloadStatus === 'ready';
           return (
-            <li key={e.entryId} className={`track ${ready ? '' : 'unavailable'}`}>
-              <button className="play-btn" disabled={!ready} onClick={() => playerControls.playFrom(ids, i)} aria-label={`Tocar ${t.title}`}>
+            <SortableRow key={e.entryId} id={e.entryId} className={`track ${ready ? '' : 'unavailable'}`}>
+              <button className="play-btn" disabled={!ready} onClick={() => playerControls.playFrom(ids, i, source)} aria-label={`Tocar ${t.title}`}>
                 {ready ? '▶' : '·'}
               </button>
               <span className="num muted">{i + 1}</span>
@@ -169,13 +203,13 @@ export function PlaylistView({ id }: { id: number }) {
               <span className={`status ${t.downloadStatus}`}>{STATUS_LABEL[t.downloadStatus]}</span>
               {t.bitrateKbps && <span className="muted bitrate">{fmtBitrate(t.bitrateKbps)}</span>}
               <span className="muted">{fmtDuration(t.durationSeconds)}</span>
-              <button onClick={() => move(i, -1)} disabled={i === 0} aria-label="Mover para cima">↑</button>
-              <button onClick={() => move(i, 1)} disabled={i === entries.length - 1} aria-label="Mover para baixo">↓</button>
               <button onClick={() => remove(e.entryId)}>Remover</button>
-            </li>
+            </SortableRow>
           );
         })}
       </ol>
+      </SortableContext>
+      </DndContext>
 
       <h2>Adicionar músicas</h2>
       <form className="search" onSubmit={onSearch}>
