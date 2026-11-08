@@ -203,5 +203,7 @@ Este projeto foi desenvolvido estritamente para **fins educacionais e de estudo*
 
 ## Próximos passos sugeridos
 
-- Persistir a fila no servidor, se quiser sincronizar entre dispositivos.
-- Trocar o SQLite por PostgreSQL e as tarefas em memória por BullMQ + Redis, se a carga crescer.
+- **Persistir a fila no servidor, se quiser sincronizar entre dispositivos.**
+  Hoje a fila e a faixa atual ficam no `localStorage` de cada navegador. Assim, quem começa a ouvir no computador não consegue continuar do mesmo ponto no celular. Guardar esse estado na API permitiria retomar a reprodução em qualquer aparelho.
+- **Trocar o SQLite por PostgreSQL e as tarefas em memória por BullMQ + Redis, se a carga crescer.**
+  O SQLite aceita uma escrita por vez, e a fila de downloads em memória só existe dentro de um único processo da API (depois de reiniciar, ela é refeita a partir das faixas pendentes) e não pode ser dividida entre várias instâncias. Com muitos usuários ou downloads simultâneos, um banco cliente-servidor e uma fila persistente trariam escritas concorrentes, novas tentativas automáticas e escala horizontal. Em troca, a infraestrutura deixa de ser leve.
