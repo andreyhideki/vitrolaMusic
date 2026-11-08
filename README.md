@@ -180,6 +180,7 @@ Este projeto foi desenvolvido estritamente para **fins educacionais e de estudo*
 - Volume persistido durante a troca de faixas: o áudio não volta para o máximo ao iniciar outra música.
 - Registra cada reprodução (total ou parcial) e contabiliza pulos para estatísticas.
 - Player fixo na parte inferior, sempre visível mesmo com scroll longo.
+- Clicar na faixa atual do player abre a origem do que está tocando (playlist, álbum, busca etc.); sem origem registrada, abre o álbum da faixa.
 - Fila e configurações salvas em `localStorage`, para restaurar após recarregar a página.
 
 ## Funcionalidades da interface
@@ -194,7 +195,8 @@ Este projeto foi desenvolvido estritamente para **fins educacionais e de estudo*
 - **Histórico de buscas:** as últimas 10 buscas ficam salvas e podem ser reexecutadas.
 - **Download com progresso:** telas de álbum e pré-visualização mostram barra de progresso ao importar faixas.
 - **Modal de confirmação:** exclusões de álbuns, faixas e playlists usam um modal customizado.
-- **Playlists:** adicionar, remover, reordenar, buscar músicas na biblioteca e receber sugestões por gênero (até 10 faixas).
+- **Playlists:** adicionar, remover, reordenar arrastando pela alça ⋮⋮ (mouse, toque com leve espera e teclado), buscar músicas na biblioteca e receber sugestões por gênero (até 10 faixas).
+- **Layout responsivo:** desktop (> 1024px) respeita a preferência de menu recolhido; tablet (641–1024px) mostra o menu só com ícones; no mobile (≤ 640px) o menu vira uma gaveta aberta pelo botão ☰ (fecha ao tocar fora, ao navegar, com Esc ou com o "voltar" do aparelho), o player ocupa duas linhas e as ações das faixas ficam no menu "⋯".
 - **Paranoic (analytics):** tela acessível pelo menu inferior com estatísticas de reprodução — totalizadores, ranking por música/artista/álbum/gênero e gráficos por dia, semana, mês ou ano.
 - **Limpeza automática:** opção de remover faixas baixadas e não tocadas após 180 dias.
 - **PWA:** manifest, ícones e Service Worker para instalação.
@@ -202,5 +204,4 @@ Este projeto foi desenvolvido estritamente para **fins educacionais e de estudo*
 ## Próximos passos sugeridos
 
 - Persistir a fila no servidor, se quiser sincronizar entre dispositivos.
-- Reordenar por arrastar e soltar (`dnd-kit`), no lugar dos botões ↑ ↓.
 - Trocar o SQLite por PostgreSQL e as tarefas em memória por BullMQ + Redis, se a carga crescer.
