@@ -1,11 +1,12 @@
 # Vitrola Music
 
-Player de áudio web com busca por música, artista ou álbum, capas e metadados, playlists, reprodução sequencial ou aleatória, fila de reprodução e downloads de faixas para a biblioteca local.
+Player de áudio web com busca por música, artista ou álbum, capas e metadados, playlists, reprodução sequencial ou aleatória, fila de reprodução e downloads de faixas para a biblioteca local. Também roda como app Android standalone (APK), sem precisar de PC.
 
 ```
 vitrolaMusic/
 ├── api/        # Express 5 + SQLite (busca, metadados, playlists, streaming com Range)
-└── frontend/   # React + Vite + TypeScript + Zustand (player, fila, interface)
+├── frontend/   # React + Vite + TypeScript + Zustand (player, fila, interface)
+└── mobile/     # APK Android (Capacitor): reaproveita frontend/src e api/src no celular
 ```
 
 ## Buy me a Coffee
@@ -55,6 +56,7 @@ Principais comandos (`make help` lista todos):
 | `make shell-api` / `make shell-web` | Abre um shell em cada container |
 | `make reset` | Recria os volumes de `node_modules` (após mudar dependências) |
 | `make clean` | Remove containers, volumes e imagens do projeto (não apaga `./data`) |
+| `make apk` / `make apk-install` | Gera o APK Android / instala no celular via USB (ver [App Android](#app-android-apk-sem-pc)) |
 
 ### Sem Docker
 
@@ -149,6 +151,20 @@ make mobile-test  # testa a API local pelos adaptadores Android
 - Enquanto toca ou baixa, o app mostra uma notificação fixa: é o serviço em primeiro plano que o mantém funcionando com a tela apagada.
 - Pasta de importação (`Artista - Título.mp3`): `Android/data/app.vitrola.music/files/import`, acessível pelo cabo USB.
 - Os dados ficam no app e são apagados se ele for desinstalado.
+- A música continua com a tela apagada. Em celulares Xiaomi/Redmi (HyperOS/MIUI) e outros com economia de bateria agressiva, se ela parar depois de muito tempo, coloque o app em **Bateria → Sem restrições** nas informações do app.
+- O modo "tocar sem baixar" funciona no APK: o app pega a URL direta do áudio com o `yt-dlp` (leva alguns segundos para começar).
+- Saída de áudio: o botão "Tocar em" do player abre o seletor de saída do Android. Para tocar numa **Alexa/Echo**, pareie o Echo por Bluetooth (veja [Funcionalidades do player](#funcionalidades-do-player)).
+
+#### Instalar pelo USB no WSL2
+
+O `adb` do Linux no WSL2 não enxerga aparelhos USB. Por isso o `make apk-install` usa o `adb.exe` do Windows (do Android SDK em `C:\Android\Sdk` ou em `%LOCALAPPDATA%\Android\Sdk`); para outro caminho, use `make apk-install ADB=/caminho/adb.exe`.
+
+1. No celular: **Sobre o telefone** → toque 7 vezes em "Versão do HyperOS/MIUI" (ou "Número da versão") para liberar as opções do desenvolvedor.
+2. Em **Opções do desenvolvedor**, ligue **Depuração USB**. Nos Xiaomi/Redmi, ligue também **Instalar via USB** (sem ela a instalação falha com `INSTALL_FAILED_USER_RESTRICTED`).
+3. Conecte o cabo e aceite o aviso **"Permitir depuração USB?"** no celular.
+4. Rode `make apk-install`. Se aparecer `protocol fault` ou o aparelho não for listado, encerre o `adb` do Linux (`adb kill-server`): os dois disputam a porta 5037.
+
+Para depurar a interface no aparelho, abra `chrome://inspect` no Chrome do Windows com o celular conectado.
 
 ## Como as músicas chegam ao player
 
@@ -157,7 +173,8 @@ make mobile-test  # testa a API local pelos adaptadores Android
 3. O download usa **fontes de áudio** (`api/src/services/downloader.ts`). A ordem de busca é:
    1. `localFolderProvider`: procura o arquivo na pasta `IMPORT_DIR` pelo nome (`Artista - Título.mp3`, por exemplo) e copia para `data/media`.
    2. provedor externo (`yt-dlp`): se não encontrar localmente, busca a faixa em uma fonte externa de áudio, converte para MP3 e salva em `data/media`. Para contornar restrições SABR do YouTube, o `yt-dlp` usa `--extractor-args "youtube:player_client=android"` e tenta primeiro **sem cookies**; só usa os cookies configurados se a tentativa anônima falhar.
-4. Quando a faixa fica `ready`, o player toca via `/api/tracks/:id/stream`, com suporte a HTTP `Range`.
+4. Quando a faixa fica `ready`, o player toca via `/api/tracks/:id/stream`, com suporte a HTTP `Range`. No APK, o arquivo é servido direto do armazenamento do app, também com `Range` (seek e crossfade).
+5. Logo depois do download, a API mede a loudness da faixa (EBU R128, filtro `loudnorm` do `ffmpeg`), usada na equalização de volume.
 
 ## ⚖️ Disclaimer / Isenção de Responsabilidade
 
@@ -205,6 +222,8 @@ Este projeto foi desenvolvido estritamente para **fins educacionais e de estudo*
 - Pula faixas que ainda não foram baixadas e faixas com erro.
 - Pré-carregamento da próxima faixa e integração com Media Session (controles do sistema e tela de bloqueio).
 - Volume persistido durante a troca de faixas: o áudio não volta para o máximo ao iniciar outra música.
+- **Crossfade** configurável (0 a 12 s, nas Configurações): a próxima faixa entra com fade-in enquanto a atual sai. Não acontece com "repetir faixa", no fim da fila ou em faixas curtas.
+- **Equalização de volume** (ativada por padrão): leva todas as faixas a um volume parecido (alvo de -16 LUFS), só atenuando as mais altas. No iOS o navegador não deixa o site controlar o volume, então não tem efeito.
 - Saída de áudio ("Tocar em", botão ao lado do volume): lista as saídas conectadas (alto-falante, fone, Bluetooth, USB, HDMI) e troca para onde a música toca.
   - **Computador** (Chrome/Edge/Firefox, abrindo por `localhost`): troca direto pelo app. Na primeira vez, o Chrome/Edge pede o microfone só para mostrar os nomes das saídas (ele é fechado na hora). Acessando pelo IP da rede o navegador não permite escolher a saída, e o botão some.
   - **APK Android**: abre o seletor "Tocar em" do Android (ou as configurações de Bluetooth, em ROMs sem ele). O app não consegue trocar a rota sozinho.
@@ -218,7 +237,7 @@ Este projeto foi desenvolvido estritamente para **fins educacionais e de estudo*
 
 - **Tema claro/escuro:** alternância persistente no topo da aplicação.
 - **Sidebar colapsável:** menu lateral pode exibir apenas ícones e logo reduzido; estado persistido; scroll independente do conteúdo.
-- **Navegação voltar/avançar:** botões no topo permitem retornar e avançar entre telas, preservando filtros e resultados de busca.
+- **Navegação voltar/avançar:** botões no topo permitem retornar e avançar entre telas, preservando filtros e resultados de busca. Essas setas e a de recolher o menu usam o mesmo estilo: chevron (‹ ›) num círculo preenchido.
 - **Home/dashboard:** saudação, contagem de álbuns/faixas/playlists, espaço usado em disco e ações rápidas "Tocar tudo" / "Aleatório".
 - **Carrossel de álbuns:** na home os álbuns ficam em um carrossel horizontal arrastável, com setas < > ao lado do título para navegar de 1 a 3 álbuns por clique.
 - **Capas de álbum com play:** botão verde de play em destaque nas capas para tocar o álbum direto da home; muda para pause vermelho quando o álbum está sendo reproduzido.
@@ -231,6 +250,7 @@ Este projeto foi desenvolvido estritamente para **fins educacionais e de estudo*
 - **Paranoic (analytics):** tela acessível pelo menu inferior com estatísticas de reprodução — totalizadores, ranking por música/artista/álbum/gênero e gráficos por dia, semana, mês ou ano.
 - **Limpeza automática:** opção de remover faixas baixadas e não tocadas após 180 dias.
 - **PWA:** manifest, ícones e Service Worker para instalação.
+- **App Android:** a mesma interface num APK que funciona sem PC (ver [App Android](#app-android-apk-sem-pc)).
 
 ## Próximos passos sugeridos
 

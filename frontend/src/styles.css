@@ -198,17 +198,15 @@ body.theme-light main {
   right: 0;
   height: var(--player-h);
   display: grid;
-  grid-template-columns: 220px 2fr 1fr;
+  /* Faixa atual | controles | volume. A faixa atual tem largura mínima própria (não depende
+     do menu recolhido) para capa, título, banda e qualidade não ficarem espremidos. */
+  grid-template-columns: minmax(240px, 1fr) minmax(0, 1.4fr) minmax(200px, 1fr);
   align-items: center;
   gap: 16px;
   padding: 0 max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
   background: var(--panel);
   border-top: 1px solid var(--border);
   z-index: 50;
-}
-
-.app.sidebar-collapsed .player {
-  grid-template-columns: 80px 2fr 1fr;
 }
 
 button {
@@ -281,11 +279,14 @@ input, select {
 
 .now { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .now img { width: 56px; height: 56px; border-radius: 4px; object-fit: cover; }
-.now .title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.now img { flex: none; }
+.now > div { flex: 1; }
+.now .title,
+.now .muted { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .controls { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .controls .buttons { display: flex; gap: 14px; align-items: center; }
-.progress { display: flex; align-items: center; gap: 8px; width: 100%; max-width: 600px; font-size: 11px; color: var(--muted); }
+.progress { display: flex; align-items: center; gap: 8px; width: 100%; max-width: 440px; font-size: 11px; color: var(--muted); }
 .progress-bar { position: relative; flex: 1; height: 4px; background: #535353; border-radius: 2px; }
 .progress-fill { position: absolute; top: 0; left: 0; height: 100%; background: var(--accent); border-radius: 2px; }
 .progress-bar input {
@@ -1027,7 +1028,8 @@ input.range {
   .header img { width: 160px; height: 160px; }
   .header h1, .home-hero h1 { font-size: 32px; }
   .track .bitrate { display: none; }
-  .app.sidebar-collapsed .player { grid-template-columns: minmax(160px, 1fr) 2fr minmax(120px, 0.7fr); }
+  .player { grid-template-columns: minmax(200px, 1fr) minmax(0, 1.3fr) minmax(170px, 0.8fr); }
+  .progress { max-width: 360px; }
   .volume { width: 120px; }
   .volume:has(.audio-output) { width: 156px; }
 }

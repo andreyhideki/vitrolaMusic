@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { api, AppSettings, errorMessage, send } from '../api';
 import { useAuth } from '../auth';
 import { playerControls } from '../player/usePlayerAudio';
+import { useNotice } from '../notice';
 
 interface Props {
   open: boolean;
@@ -35,14 +36,12 @@ export function SettingsModal({ open, onClose }: Props) {
   const [cookiesText, setCookiesText] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [saved, setSaved] = useState(false);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const cookiesFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
     setError('');
-    setSaved(false);
     api<AppSettings>('/settings')
       .then(setSettings)
       .catch((e) => setError(errorMessage(e)));
@@ -65,8 +64,9 @@ export function SettingsModal({ open, onClose }: Props) {
       setSettings(s);
       playerControls.configure({ crossfadeSeconds: s.crossfadeSeconds, normalizeVolume: s.normalizeVolume });
       setCookiesText('');
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      // Salvou: fecha o modal e confirma com um aviso (em caso de erro ele fica aberto).
+      useNotice.getState().show('Configurações salvas', 'success');
+      onClose();
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -325,7 +325,6 @@ export function SettingsModal({ open, onClose }: Props) {
           </div>
 
           {error && <p className="error">{error}</p>}
-          {saved && <p className="success">Salvo!</p>}
 
           <div className="modal-actions">
             <button type="button" onClick={onClose}>Fechar</button>
