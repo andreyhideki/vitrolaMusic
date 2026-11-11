@@ -2,7 +2,8 @@
  * Entrada do APK. Ordem importa:
  *  1. bootstrap: pastas, process.env e banco carregado;
  *  2. a API local (`api/src`, via `src/server`), que abre o banco ao ser importada;
- *  3. a interface de `frontend/src`, sem alterações além do `platform.resolveStreamUrl`.
+ *  3. a interface de `frontend/src`, sem alterações: o APK só preenche os hooks de `platform`
+ *     (URL do áudio e saídas de áudio).
  */
 import { createRoot } from 'react-dom/client';
 import { App as CapApp } from '@capacitor/app';
@@ -11,6 +12,7 @@ import { bootstrap } from './bootstrap';
 import { startKeepAlive } from './keepAlive';
 import { flushAll } from './server/persist';
 import { platform } from '../../frontend/src/platform';
+import { androidAudioOutput } from './audioOutput';
 
 const root = createRoot(document.getElementById('root')!);
 
@@ -20,6 +22,7 @@ async function start(): Promise<void> {
   const server = await import('./server');
   server.installLocalFetch();
   platform.resolveStreamUrl = server.resolveStreamUrl;
+  platform.audioOutput = androidAudioOutput;
 
   // Grava o banco antes de o Android poder encerrar o app.
   void CapApp.addListener('pause', () => void flushAll());

@@ -53,6 +53,8 @@ let activeIndex = 0;
 let preloader: HTMLAudioElement | null = null;
 let masterVolume = 1;
 let masterMuted = false;
+/** Saída de áudio escolhida no navegador (`setSinkId`); '' = padrão do sistema. */
+let sinkId = '';
 
 /** Faixa carregada em cada <audio> (para recalcular a normalização). */
 const elTrack = new Map<HTMLAudioElement, string>();
@@ -75,6 +77,7 @@ function getPlayers(): [HTMLAudioElement, HTMLAudioElement] {
     const make = () => {
       const el = new Audio();
       el.preload = 'auto';
+      if (sinkId) el.setSinkId?.(sinkId).catch(() => undefined);
       return el;
     };
     players = [make(), make()];
@@ -349,6 +352,15 @@ export const playerControls = {
     masterVolume = volume;
     masterMuted = volume === 0;
     getPlayers().forEach(applyVolume);
+  },
+
+  /**
+   * Manda o som para outra saída (navegador com `setSinkId`). Vale para os dois <audio>,
+   * senão o crossfade tocaria a próxima faixa na saída antiga.
+   */
+  async setOutputDevice(id: string): Promise<void> {
+    sinkId = id;
+    await Promise.all(getPlayers().map((el) => el.setSinkId?.(id)));
   },
 
   /** Aplica as configurações de crossfade/normalização (vindas de /api/settings). */
