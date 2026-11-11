@@ -47,7 +47,7 @@ const DEFAULTS: AppSettings = {
   cleanupUnusedAfterDays: 0,
   youtubeCookiesPath: '',
   crossfadeSeconds: 0,
-  normalizeVolume: false,
+  normalizeVolume: true,
 };
 
 function get(key: keyof AppSettings): string {

@@ -29,7 +29,7 @@ export function SettingsModal({ open, onClose }: Props) {
     cleanupUnusedAfterDays: 0,
     youtubeCookiesPath: '',
     crossfadeSeconds: 0,
-    normalizeVolume: false,
+    normalizeVolume: true,
   });
   const [showCookiesHelp, setShowCookiesHelp] = useState(false);
   const [cookiesText, setCookiesText] = useState('');

@@ -47,7 +47,7 @@ const MIN_GAIN_DB = -15;
 
 // Dois <audio> para o app inteiro: um toca, o outro entra no crossfade.
 let config: PlayerAudioConfig = { isReady: () => true };
-let settings: PlayerSettings = { crossfadeSeconds: 0, normalizeVolume: false };
+let settings: PlayerSettings = { crossfadeSeconds: 0, normalizeVolume: true };
 let players: [HTMLAudioElement, HTMLAudioElement] | null = null;
 let activeIndex = 0;
 let preloader: HTMLAudioElement | null = null;
