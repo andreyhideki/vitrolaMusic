@@ -115,6 +115,7 @@ Vale o mesmo para outros navegadores. O Firefox costuma pedir essa permissão na
 - Use o IP **de rede do computador** (no Windows, `ipconfig` → "Endereço IPv4" da Ethernet/Wi-Fi), com `http://` explícito.
 - Celular e computador precisam estar na mesma rede (não use rede de convidados), sem VPN ativa no celular (Tailscale com exit node, Cloudflare WARP, bloqueadores de anúncio em modo VPN etc.) e sem proxy no Wi-Fi.
 - Teste `http://IP-DO-COMPUTADOR:5173/api/health`: se responder `{"ok":true}`, a rede está funcionando.
+- **WSL2:** os comandos `make` usam sempre o Docker Desktop (`scripts/ensure-docker.sh`): se o daemon conectado não for ele, param o Docker Engine instalado dentro do WSL (pede `sudo`) e iniciam o Docker Desktop. O engine do WSL publica as portas só na VM do WSL, então o celular não alcança o frontend. Para usá-lo mesmo assim: `VITROLA_ALLOW_WSL_DOCKER=1 make up`.
 - **WSL2 + Docker Desktop:** o Docker Desktop já publica a porta no Windows (`0.0.0.0:5173`), não é preciso `portproxy`. Se o Firewall do Windows estiver ativo, libere a porta 5173 para a rede em uso. A Ethernet costuma ficar no perfil **Público**, que bloqueia conexões de entrada.
 
 ### Cookies do YouTube (opcional)

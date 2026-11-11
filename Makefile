@@ -10,9 +10,9 @@ help: ## Mostra os comandos disponíveis
 	@echo "Vitrola Music - comandos:"
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "} {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
+# No WSL2 garante o Docker Desktop (inicia se preciso) em vez do Docker Engine do WSL.
 check-docker:
-	@command -v docker >/dev/null 2>&1 || { echo "Docker não encontrado. Instale o Docker Desktop ou o Docker Engine."; exit 1; }
-	@docker compose version >/dev/null 2>&1 || { echo "Docker Compose v2 não encontrado."; exit 1; }
+	@bash scripts/ensure-docker.sh
 
 fix-perms: check-docker ## Ajusta o dono de ./data e das pastas geradas para o usuário dos containers (uid 1000)
 	@mkdir -p data/import
