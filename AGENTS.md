@@ -17,6 +17,7 @@
 - Monorepo simples:
   - `api/` — Express 5 + TypeScript (`tsx watch`), SQLite via `better-sqlite3`.
   - `frontend/` — React 18 + Vite + TypeScript + Zustand.
+  - `mobile/` — APK Android standalone (Capacitor 8). Não tem cópia da interface nem da API: importa `../frontend/src` e `../api/src` e troca os módulos de Node por adaptadores (ver seção **APK Android**).
 - O Vite no container faz proxy de `/api` para o serviço `api` do Compose (`API_TARGET`). Localmente (fora do Docker) o padrão é `http://localhost:5172`.
 - A API escuta em `0.0.0.0:5172` no container; o frontend em `0.0.0.0:5173`. No host, a API é publicada **só em `127.0.0.1`**; o frontend em `${VITROLA_BIND:-127.0.0.1}`. Outros aparelhos acessam a API pelo proxy `/api` do frontend.
 - Configuração do compose via `.env` na raiz (modelo em `.env.example`): `VITROLA_BIND` (use `0.0.0.0` para acesso pela rede/celular), `AUTH_TOKEN`, `AUTH_DISABLED` e `ALLOWED_HOSTS`.
@@ -62,6 +63,18 @@
 - Para rodar um teste específico dentro do container: `docker compose run --rm --no-deps web npx vitest run src/player/queue.test.ts`.
 - Não há testes de API. Valide alterações na API com `make typecheck` e testes manuais.
 
+## APK Android (`mobile/`)
+
+- Roda **no host**, sem Docker: Node, JDK 21 e Android SDK (`ANDROID_HOME`). `make apk` gera `mobile/android/app/build/outputs/apk/debug/app-debug.apk`; `make apk-install` instala via adb (no WSL2 usa o `adb.exe` do Windows, porque o WSL não enxerga USB; troque com `ADB=...`). `make mobile-test` e `make mobile-typecheck` validam o `mobile/`. O `mobile/` tem `node_modules` próprio, e as dependências que o código de `frontend/src` e `api/src` importa (react, zustand, dnd-kit, tipos do express/better-sqlite3) vêm dele (`resolve.dedupe` no Vite e `paths` no `tsconfig`). Ao adicionar dependência no frontend ou na API, adicione também em `mobile/package.json`.
+- **Reuso por adaptadores** (`mobile/vite.config.ts` → `mobile/src/shims/`): `better-sqlite3` → sql.js (WASM, síncrono; banco em memória gravado em arquivo por `src/server/persist.ts`, com debounce e no `pause` do app); `express` → `Router` local + despachante; `node:fs/promises` → Filesystem do Capacitor; `node:child_process` → plugin nativo `Vitrola.exec` (yt-dlp/ffmpeg/ffprobe da youtubedl-android, com os mesmos argumentos de `external.ts`/`audio-meta.ts`); `node:path` → `path-browserify`. `db.ts`, `repo.ts`, `settings.ts`, `importer.ts`, `downloader.ts`, `external.ts`, `audio-meta.ts`, `loudness.ts` e todas as rotas (menos `auth`) rodam **sem alteração**.
+- Módulos que não dá para adaptar (usam `fs` síncrono) têm versão própria, trocada no build pelo `API_OVERRIDES` do `vite.config.ts`: hoje só `services/cleanup.ts` → `mobile/src/server/cleanup.ts`. Se mudar o original, replique no mobile. **Não use `fs` síncrono (`statSync`, `readdirSync`...) em código novo de `api/src`**: quebra o APK. Prefira `node:fs/promises`.
+- `mobile/src/server/index.ts` monta os routers na mesma ordem de `api/src/index.ts` (ao criar rota, monte nos dois) e substitui `window.fetch` para `/api/*`. Auth fica desligada (`src/server/auth.ts`, igual a `AUTH_DISABLED`).
+- O `<audio>` não passa pelo `fetch`: o frontend chama `platform.resolveStreamUrl` (`frontend/src/platform.ts`), que no APK devolve o arquivo local servido pelo `MediaWebViewClient` (`/_vitrola_media_/<caminho>`, com Range real; o `_capacitor_file_` do Capacitor ignora o início do Range e quebra o seek) ou a URL direta do `yt-dlp -g` no modo streaming.
+- Nativo (`mobile/android/app/src/main/java/app/vitrola/music/`): `VitrolaPlugin` (exec/kill/updateYtDlp/setKeepAlive; yt-dlp atualizado automaticamente 1×/dia), `KeepAliveService` (serviço em primeiro plano `mediaPlayback|dataSync` + wake lock parcial enquanto toca ou há downloads; controlado por `mobile/src/keepAlive.ts`), `MediaWebViewClient` e `MainActivity`. O `android/` é gerado pelo `cap add android`, mas foi editado (Gradle com youtubedl-android, `useLegacyPackaging`, `abiFilters`; Manifest com permissões e serviço): não recrie, use `npx cap sync`.
+- **Gotchas do APK (achados no aparelho):** (1) no build o Vite troca `process.env` por `{}`; o `mobile/vite.config.ts` define `process.env` → `globalThis.process?.env`, senão `api/src/config.ts` não enxerga o `DATA_DIR` do bootstrap e grava em `/data` (Permission denied). Os testes do `mobile/` rodam no Node e não pegam isso. (2) Com a tela apagada o sistema congela o processo de renderização do WebView (JS e `<audio>` param), mesmo com o `KeepAliveService`: o `MainActivity` usa `setRendererPriorityPolicy(RENDERER_PRIORITY_IMPORTANT, false)`. Não remova. (3) Para depurar no aparelho via WSL2: `adb.exe forward tcp:9222 localabstract:webview_devtools_remote_<pid>` e use o DevTools a partir do Windows (a porta não chega ao WSL); não rode o `adb` do Linux junto (disputa a porta 5037).
+- Dados no aparelho: `DATA_DIR` = `files/vitrola` (privado; banco, `media/` e cookies). `IMPORT_DIR` = `Android/data/app.vitrola.music/files/import` (acessível por USB).
+- O APK só empacota `arm64-v8a` por padrão (`-PvitrolaAbis=...` para outras). Não pode ir para a Play Store (a política proíbe baixar do YouTube): a distribuição é por APK.
+
 ## Hot reload e bind mounts
 
 - Código é montado por volume (`./api:/app`, `./frontend:/app`), então alterações refletem automaticamente.
@@ -103,6 +116,7 @@
 - Modal de confirmação customizado (`frontend/src/components/ConfirmModal.tsx`) para exclusão de álbuns, faixas e playlists, substituindo o `confirm` nativo do navegador.
 - Layout responsivo (breakpoints em `frontend/src/useMediaQuery.ts` e no fim de `frontend/src/styles.css`: mobile ≤ 640px, tablet 641–1024px, desktop > 1024px). Desktop segue a preferência de menu recolhido; tablet força o menu recolhido (só ícones); mobile usa gaveta escondida aberta pelo botão ☰ do `Header` (fecha ao tocar fora, ao navegar, com Esc e com o "voltar" do aparelho). No mobile o player fica em duas linhas (sem volume/shuffle/repeat) e as ações das faixas da `TrackList` ficam no menu "⋯".
 - PWA — Fase 1 (instalável): manifest, ícones PWA (`frontend/public/pwa-*.png`, `apple-touch-icon.png`), meta tags mobile, safe areas e Service Worker gerado pelo `vite-plugin-pwa` com prompt de atualização (`frontend/src/components/PwaReloadPrompt.tsx`).
+- APK Android standalone (`mobile/`): roda frontend e API no celular, sem PC, com downloads via yt-dlp/ffmpeg nativos, reprodução e downloads em segundo plano (serviço em primeiro plano) e atualização automática do yt-dlp. Ver seção **APK Android**.
 
 ### Em andamento / desenvolvimento
 
@@ -122,3 +136,4 @@
 - `npm audit` do frontend ainda aponta itens moderados/baixos em `workbox-build` (dependência de build do `vite-plugin-pwa`); não são exploráveis em runtime e a única correção sugerida é rebaixar o plugin.
 - Player: nunca altere `el.volume` diretamente; use `applyVolume(el)` / `playerControls.setVolume()` para respeitar normalização e fades. Listeners de `<audio>` devem ignorar eventos do elemento que não é o ativo. No iOS o `volume` do `<audio>` é somente leitura: o crossfade vira apenas sobreposição e a normalização não tem efeito.
 - O Service Worker do PWA está habilitado também em desenvolvimento (`devOptions.enabled: true`). Se comportamentos estranhos de cache atrapalharem o hot reload, desabilite temporariamente no `vite.config.ts` ou use uma aba anônima.
+- Ao mexer em `api/src`, rode também `make mobile-test`: o APK executa o mesmo código pelos adaptadores de `mobile/src/shims/`, que cobrem só a parte da API do Node que o projeto usa hoje.

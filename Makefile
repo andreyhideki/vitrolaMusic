@@ -74,3 +74,39 @@ local-install: ## Alternativa sem Docker: instala as dependências no host
 
 clean: check-docker ## Remove containers, volumes e imagens do projeto (não apaga ./data)
 	$(COMPOSE) down -v --rmi local
+
+# ---------- APK Android (mobile/) ----------
+# Roda no host: precisa de Node, JDK 21 e Android SDK (ANDROID_HOME). Não usa Docker.
+APK_DEBUG := mobile/android/app/build/outputs/apk/debug/app-debug.apk
+# No WSL2 o adb do Linux não enxerga USB: usa o adb.exe do Windows (ADB=... para trocar).
+ADB ?= $(shell command -v adb.exe 2>/dev/null || ls /mnt/c/Android/Sdk/platform-tools/adb.exe /mnt/c/Users/*/AppData/Local/Android/Sdk/platform-tools/adb.exe 2>/dev/null | head -1 || echo adb)
+ifeq ($(strip $(ADB)),)
+ADB := adb
+endif
+
+.PHONY: check-android mobile-install mobile-test mobile-typecheck apk apk-install
+
+check-android:
+	@command -v java >/dev/null 2>&1 || { echo "JDK não encontrado. Instale o JDK 21."; exit 1; }
+	@[ -n "$$ANDROID_HOME" ] || [ -f mobile/android/local.properties ] || { echo "Android SDK não encontrado: defina ANDROID_HOME."; exit 1; }
+	@[ -d mobile/node_modules ] || (cd mobile && npm install)
+
+mobile-install: ## APK: instala as dependências de mobile/ (use após mudar dependências)
+	cd mobile && npm install
+
+mobile-test: check-android ## APK: testa a API local (api/src pelos adaptadores Android)
+	cd mobile && npm test
+
+mobile-typecheck: check-android ## APK: verifica tipos de mobile/ (inclui frontend/src e api/src reaproveitados)
+	cd mobile && npm run typecheck
+
+apk: check-android ## APK: gera o APK de debug (mobile/android/.../app-debug.apk)
+	cd mobile && npm run apk
+	@echo ""
+	@echo "  APK: $(APK_DEBUG)"
+	@echo "  Instalar no celular (USB): make apk-install"
+	@echo ""
+
+apk-install: ## APK: instala o APK de debug no aparelho conectado via adb
+	@case "$(ADB)" in *.exe) apk="$$(wslpath -w $(APK_DEBUG))";; *) apk="$(APK_DEBUG)";; esac; \
+	"$(ADB)" install -r "$$apk"
