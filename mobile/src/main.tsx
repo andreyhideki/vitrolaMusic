@@ -1,0 +1,42 @@
+/**
+ * Entrada do APK. Ordem importa:
+ *  1. bootstrap: pastas, process.env e banco carregado;
+ *  2. a API local (`api/src`, via `src/server`), que abre o banco ao ser importada;
+ *  3. a interface de `frontend/src`, sem alterações além do `platform.resolveStreamUrl`.
+ */
+import { createRoot } from 'react-dom/client';
+import { App as CapApp } from '@capacitor/app';
+import '../../frontend/src/styles.css';
+import { bootstrap } from './bootstrap';
+import { startKeepAlive } from './keepAlive';
+import { flushAll } from './server/persist';
+import { platform } from '../../frontend/src/platform';
+
+const root = createRoot(document.getElementById('root')!);
+
+async function start(): Promise<void> {
+  await bootstrap();
+
+  const server = await import('./server');
+  server.installLocalFetch();
+  platform.resolveStreamUrl = server.resolveStreamUrl;
+
+  // Grava o banco antes de o Android poder encerrar o app.
+  void CapApp.addListener('pause', () => void flushAll());
+
+  const { App } = await import('../../frontend/src/App');
+  root.render(<App />);
+
+  server.startBackgroundTasks();
+  startKeepAlive(server.hasActiveDownloads);
+}
+
+start().catch((err) => {
+  console.error('Falha ao iniciar o Vitrola', err);
+  root.render(
+    <div style={{ padding: 24, color: '#fff', fontFamily: 'sans-serif' }}>
+      <h2>Não foi possível iniciar o Vitrola</h2>
+      <pre style={{ whiteSpace: 'pre-wrap' }}>{err instanceof Error ? err.message : String(err)}</pre>
+    </div>,
+  );
+});

@@ -124,6 +124,32 @@ Se o seu IP/assinatura de rede estiver sendo bloqueada pelo YouTube, você pode 
 
 > ⚠️ **Atenção:** contas no experimento **SABR-only** do YouTube podem ficar sem formatos de áudio disponíveis quando usam cookies. Por isso o downloader tenta primeiro uma conexão anônima e só usa os cookies se essa tentativa falhar. Use cookies por sua conta e risco, respeitando os Termos de Serviço do Google.
 
+### App Android (APK, sem PC)
+
+A pasta `mobile/` gera um APK que roda **tudo no celular**: a mesma interface, biblioteca, downloads, playlists e estatísticas, sem servidor nem rede local. Ele não copia o código: reaproveita `frontend/src` e `api/src` e troca só o que é específico do Node:
+
+| No PC (Docker) | No APK |
+|---|---|
+| `better-sqlite3` | SQLite em WASM (sql.js), gravado em arquivo do app |
+| `node:fs` | Filesystem do Capacitor |
+| `yt-dlp`, `ffmpeg`, `ffprobe` (`child_process`) | Binários Android da [youtubedl-android](https://github.com/yausername/youtubedl-android), via plugin nativo |
+| Express (HTTP) | Os mesmos routers, chamados direto pelo `fetch('/api/...')` do app |
+
+Requisitos (no host, sem Docker): Node 22+, JDK 21 e Android SDK (`ANDROID_HOME`).
+
+```bash
+make apk          # gera mobile/android/app/build/outputs/apk/debug/app-debug.apk
+make apk-install  # instala no celular conectado por USB (adb, depuração USB ativada)
+make mobile-test  # testa a API local pelos adaptadores Android
+```
+
+- O APK é só **arm64-v8a** (celulares atuais), com cerca de 60 MB por causa do Python e do ffmpeg embarcados. Para emulador x86_64: `cd mobile/android && ./gradlew assembleDebug -PvitrolaAbis=arm64-v8a,x86_64`.
+- Não pode ser publicado na Play Store (a política proíbe baixar do YouTube). A instalação é manual: copie o APK para o celular e permita "instalar apps desconhecidos".
+- O app atualiza o `yt-dlp` sozinho no máximo uma vez por dia (o YouTube muda com frequência).
+- Enquanto toca ou baixa, o app mostra uma notificação fixa: é o serviço em primeiro plano que o mantém funcionando com a tela apagada.
+- Pasta de importação (`Artista - Título.mp3`): `Android/data/app.vitrola.music/files/import`, acessível pelo cabo USB.
+- Os dados ficam no app e são apagados se ele for desinstalado.
+
 ## Como as músicas chegam ao player
 
 1. Você busca na barra de pesquisa. A API consulta um catálogo público externo (metadados e capas, sem áudio).

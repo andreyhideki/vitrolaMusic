@@ -7,6 +7,7 @@ import { useScreenSize } from './useMediaQuery';
 import { usePlayerStore } from './player/store';
 import { PlayerAudioConfig, playerControls, usePlayerAudio } from './player/usePlayerAudio';
 import { useTheme } from './theme';
+import { platform } from './platform';
 import { takeTokenFromUrl, useAuth } from './auth';
 import { LoginView } from './views/LoginView';
 import { Sidebar } from './components/Sidebar';
@@ -116,9 +117,10 @@ function AuthenticatedApp() {
     },
     streamUrl: (id) => {
       const track = useLibrary.getState().byId[id];
-      if (track?.downloadStatus === 'ready') return `/api/tracks/${id}/stream`;
-      if (streamWithoutDownload) return `/api/tracks/${id}/stream-url`;
-      return `/api/tracks/${id}/stream`;
+      const url = track?.downloadStatus !== 'ready' && streamWithoutDownload
+        ? `/api/tracks/${id}/stream-url`
+        : `/api/tracks/${id}/stream`;
+      return platform.resolveStreamUrl ? platform.resolveStreamUrl(id, url) : url;
     },
   };
 
