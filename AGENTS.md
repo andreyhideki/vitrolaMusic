@@ -6,6 +6,7 @@
 
 - **Docker é o fluxo padrão.** Use `make up` para subir API + frontend. Não execute `npm run dev` diretamente no host a menos que esteja seguindo o fluxo "Sem Docker" do README.
 - `make typecheck` verifica tipos de **API e frontend** (roda nos dois containers).
+- **WSL2:** todo alvo do Makefile passa por `check-docker` → `scripts/ensure-docker.sh`, que exige o **Docker Desktop** (confere `docker info` → `OperatingSystem`). Se for outro daemon, para o `docker-ce` do WSL (`sudo systemctl stop docker.socket docker.service`) e inicia o `Docker Desktop.exe`, esperando até 120 s (`DOCKER_WAIT_SECONDS`). Antes, lê `%APPDATA%\Docker\settings-store.json` e falha na hora se a integração WSL da distro estiver desligada (sem ela o `/var/run/docker.sock` nunca aparece). O engine do WSL causava falha de rede (portas não chegavam ao Windows/celular). `VITROLA_ALLOW_WSL_DOCKER=1` desliga a checagem; `DOCKER_DESKTOP_EXE` muda o caminho do executável.
 - `make test` roda **somente** os testes do frontend (`frontend/src/player/queue.test.ts` via vitest).
 - `make reset` recria os volumes de `node_modules`. Use depois de alterar dependências.
 - `make clean` remove containers, volumes e imagens, **mas não apaga `./data`**.
