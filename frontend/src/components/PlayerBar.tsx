@@ -5,6 +5,7 @@ import { playerControls } from '../player/usePlayerAudio';
 import { useLibrary } from '../library';
 import { useNav } from '../nav';
 import { fmtBitrate, fmtTime } from '../format';
+import { AudioOutputButton } from './AudioOutputButton';
 
 export function PlayerBar() {
   const currentId = usePlayerStore((s) => s.currentTrackId);
@@ -108,6 +109,7 @@ export function PlayerBar() {
       </div>
 
       <div className="volume">
+        <AudioOutputButton />
         <button
           className="icon"
           onClick={() => {

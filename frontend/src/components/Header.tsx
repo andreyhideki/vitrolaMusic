@@ -1,6 +1,7 @@
 import { useNav } from '../nav';
 import { useTheme } from '../theme';
 import { useUi } from '../ui';
+import { Chevron } from './Chevron';
 
 export function Header() {
   const { canGoBack, canGoForward, back, forward } = useNav();
@@ -16,8 +17,12 @@ export function Header() {
             ☰
           </button>
         )}
-        <button onClick={() => back()} disabled={!canGoBack} aria-label="Voltar">←</button>
-        <button onClick={() => forward()} disabled={!canGoForward} aria-label="Avançar">→</button>
+        <button onClick={() => back()} disabled={!canGoBack} aria-label="Voltar" title="Voltar">
+          <Chevron direction="left" />
+        </button>
+        <button onClick={() => forward()} disabled={!canGoForward} aria-label="Avançar" title="Avançar">
+          <Chevron direction="right" />
+        </button>
       </div>
       <button className="theme-toggle" onClick={toggle} aria-label="Alternar tema">
         {theme === 'dark' ? '☀' : '☾'}

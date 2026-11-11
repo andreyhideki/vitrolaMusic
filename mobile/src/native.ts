@@ -25,3 +25,14 @@ export interface VitrolaPlugin {
 }
 
 export const Vitrola = registerPlugin<VitrolaPlugin>('Vitrola');
+
+/** Saídas de áudio do aparelho (`AudioOutputPlugin.java`). */
+export interface AudioOutputPlugin {
+  list(): Promise<{ outputs: { id: string; name: string; kind: 'speaker' | 'wired' | 'bluetooth' | 'usb' | 'hdmi' | 'other'; active: boolean }[] }>;
+  /** Abre o seletor "Tocar em" do Android (ou o Bluetooth, se a ROM não tiver o seletor). */
+  showSystemPicker(): Promise<{ shown: boolean }>;
+  openBluetoothSettings(): Promise<{ shown: boolean }>;
+  addListener(event: 'outputsChanged', fn: () => void): Promise<PluginListenerHandle>;
+}
+
+export const AudioOutput = registerPlugin<AudioOutputPlugin>('AudioOutput');

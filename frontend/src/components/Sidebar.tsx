@@ -3,6 +3,7 @@ import { useNav } from '../nav';
 import { useSidebarCollapsed, useUi } from '../ui';
 import { BUY_ME_A_COFFEE_URL } from '../config';
 import { SettingsModal } from './SettingsModal';
+import { Chevron } from './Chevron';
 
 const MENU = [
   { kind: 'library' as const, label: 'Início', icon: '🏠' },
@@ -64,7 +65,7 @@ export function Sidebar() {
           aria-label={isMobile ? 'Fechar menu' : collapsed ? 'Expandir menu' : 'Colapsar menu'}
           title={isMobile ? 'Fechar menu' : collapsed ? 'Expandir menu' : 'Colapsar menu'}
         >
-          {isMobile ? '✕' : collapsed ? '→' : '←'}
+          {isMobile ? '✕' : <Chevron direction={collapsed ? 'right' : 'left'} />}
         </button>
       )}
       <nav>

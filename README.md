@@ -205,6 +205,10 @@ Este projeto foi desenvolvido estritamente para **fins educacionais e de estudo*
 - Pula faixas que ainda não foram baixadas e faixas com erro.
 - Pré-carregamento da próxima faixa e integração com Media Session (controles do sistema e tela de bloqueio).
 - Volume persistido durante a troca de faixas: o áudio não volta para o máximo ao iniciar outra música.
+- Saída de áudio ("Tocar em", botão ao lado do volume): lista as saídas conectadas (alto-falante, fone, Bluetooth, USB, HDMI) e troca para onde a música toca.
+  - **Computador** (Chrome/Edge/Firefox, abrindo por `localhost`): troca direto pelo app. Na primeira vez, o Chrome/Edge pede o microfone só para mostrar os nomes das saídas (ele é fechado na hora). Acessando pelo IP da rede o navegador não permite escolher a saída, e o botão some.
+  - **APK Android**: abre o seletor "Tocar em" do Android (ou as configurações de Bluetooth, em ROMs sem ele). O app não consegue trocar a rota sozinho.
+  - **Alexa/Echo**: o Echo não recebe transmissão de outros apps (não tem Chromecast nem AirPlay). Use-o como caixa Bluetooth: diga "Alexa, parear Bluetooth", conecte o celular/computador ao Echo e ele aparece na lista.
 - Registra cada reprodução (total ou parcial) e contabiliza pulos para estatísticas.
 - Player fixo na parte inferior, sempre visível mesmo com scroll longo.
 - Clicar na faixa atual do player abre a origem do que está tocando (playlist, álbum, busca etc.); sem origem registrada, abre o álbum da faixa.
