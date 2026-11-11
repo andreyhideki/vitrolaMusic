@@ -24,7 +24,7 @@ async function normalizeLocalTrack(local: repo.TrackDto): Promise<repo.TrackDto>
   const exists = await fileExists(file?.file_path ?? null);
   if (exists) return { ...local, downloadStatus: 'ready' };
   // Se não há arquivo, nunca pode estar ready: mostra como pending.
-  if (local.downloadStatus === 'ready') return { ...local, downloadStatus: 'pending', bitrateKbps: null };
+  if (local.downloadStatus === 'ready') return { ...local, downloadStatus: 'pending', bitrateKbps: null, loudnessLufs: null };
   return local;
 }
 
@@ -65,6 +65,7 @@ catalogRouter.get('/albums/:id', async (req, res) => {
         genreId: album.genreId,
         genreName: album.genreName,
         bitrateKbps: null,
+        loudnessLufs: null,
         catalogId: String(t.id),
       };
     }));

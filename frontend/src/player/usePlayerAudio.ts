@@ -18,6 +18,15 @@ export interface PlayerAudioConfig {
   getMeta?: (trackId: string) => TrackMeta | null;
   /** Retorna a URL do áudio. Pode ser síncrona ou assíncrona. */
   streamUrl?: (trackId: string) => string | Promise<string>;
+  /** Loudness integrada da faixa em LUFS (null = desconhecida). Usada na normalização. */
+  getLoudness?: (trackId: string) => number | null;
+}
+
+export interface PlayerSettings {
+  /** Segundos de crossfade entre faixas (0 = desativado). */
+  crossfadeSeconds: number;
+  /** Equaliza o volume entre faixas pela loudness medida. */
+  normalizeVolume: boolean;
 }
 
 type Advance = (s: Q.QueueState) => Q.Step;
@@ -25,21 +34,125 @@ type Advance = (s: Q.QueueState) => Q.Step;
 const MAX_SKIPS = 500;
 const defaultStreamUrl = (id: string) => `/api/tracks/${id}/stream`;
 
-// Há um único <audio> para o app inteiro.
+/**
+ * Normalização: alvo de loudness em LUFS. O volume do <audio> não passa de 1,
+ * então só é possível abaixar faixas mais altas que o alvo; -16 LUFS equilibra
+ * músicas atuais (bem altas) sem deixar o volume geral baixo demais.
+ */
+const TARGET_LUFS = -16;
+/** Loudness assumida para faixas ainda não analisadas (ex.: streaming), típica de músicas atuais. */
+const UNKNOWN_LUFS = -11;
+/** Limite de atenuação, para faixas muito comprimidas não ficarem quase mudas. */
+const MIN_GAIN_DB = -15;
+
+// Dois <audio> para o app inteiro: um toca, o outro entra no crossfade.
 let config: PlayerAudioConfig = { isReady: () => true };
-let audio: HTMLAudioElement | null = null;
+let settings: PlayerSettings = { crossfadeSeconds: 0, normalizeVolume: false };
+let players: [HTMLAudioElement, HTMLAudioElement] | null = null;
+let activeIndex = 0;
 let preloader: HTMLAudioElement | null = null;
 let masterVolume = 1;
 let masterMuted = false;
 
+/** Faixa carregada em cada <audio> (para recalcular a normalização). */
+const elTrack = new Map<HTMLAudioElement, string>();
+/** Nível do fade de cada <audio>, de 0 a 1 (1 = sem fade). */
+const fadeLevel = new Map<HTMLAudioElement, number>();
+interface Fade {
+  from: number;
+  to: number;
+  start: number;
+  ms: number;
+  done?: () => void;
+}
+const fades = new Map<HTMLAudioElement, Fade>();
+let fadeTimer: ReturnType<typeof setInterval> | null = null;
+
 const store = usePlayerStore;
 
-function getAudio(): HTMLAudioElement {
-  if (!audio) {
-    audio = new Audio();
-    audio.preload = 'auto';
+function getPlayers(): [HTMLAudioElement, HTMLAudioElement] {
+  if (!players) {
+    const make = () => {
+      const el = new Audio();
+      el.preload = 'auto';
+      return el;
+    };
+    players = [make(), make()];
   }
-  return audio;
+  return players;
+}
+
+/** O <audio> que está tocando a faixa atual. */
+function getAudio(): HTMLAudioElement {
+  return getPlayers()[activeIndex];
+}
+
+/** O <audio> que está terminando um crossfade (se houver). */
+function getOutgoing(): HTMLAudioElement {
+  return getPlayers()[1 - activeIndex];
+}
+
+function normalizationGain(trackId: string | undefined): number {
+  if (!settings.normalizeVolume || !trackId) return 1;
+  const lufs = config.getLoudness?.(trackId) ?? UNKNOWN_LUFS;
+  const db = Math.max(MIN_GAIN_DB, Math.min(0, TARGET_LUFS - lufs));
+  return Math.pow(10, db / 20);
+}
+
+/** Volume final = volume geral × normalização da faixa × curva do fade. */
+function applyVolume(el: HTMLAudioElement) {
+  if (masterMuted) {
+    el.volume = 0;
+    return;
+  }
+  const level = fadeLevel.get(el) ?? 1;
+  // Curva de potência constante: o volume percebido fica estável durante o crossfade.
+  const fade = Math.sin((level * Math.PI) / 2);
+  el.volume = Math.min(1, Math.max(0, masterVolume * normalizationGain(elTrack.get(el)) * fade));
+}
+
+function tickFades() {
+  const now = performance.now();
+  for (const [el, f] of fades) {
+    const t = f.ms > 0 ? Math.min(1, (now - f.start) / f.ms) : 1;
+    fadeLevel.set(el, f.from + (f.to - f.from) * t);
+    applyVolume(el);
+    if (t >= 1) {
+      fades.delete(el);
+      f.done?.();
+    }
+  }
+  if (fades.size === 0 && fadeTimer !== null) {
+    clearInterval(fadeTimer);
+    fadeTimer = null;
+  }
+}
+
+function fadeTo(el: HTMLAudioElement, to: number, ms: number, done?: () => void) {
+  fades.set(el, { from: fadeLevel.get(el) ?? 1, to, start: performance.now(), ms, done });
+  fadeTimer ??= setInterval(tickFades, 50);
+  tickFades();
+}
+
+function resetFade(el: HTMLAudioElement, level = 1) {
+  fades.delete(el);
+  fadeLevel.set(el, level);
+  applyVolume(el);
+}
+
+function unload(el: HTMLAudioElement) {
+  fades.delete(el);
+  fadeLevel.set(el, 1);
+  elTrack.delete(el);
+  el.pause();
+  el.removeAttribute('src');
+  el.load();
+}
+
+/** Interrompe a faixa que estava saindo num crossfade (ex.: usuário pulou ou pausou). */
+function stopOutgoing() {
+  const out = getOutgoing();
+  if (out.getAttribute('src')) unload(out);
 }
 
 async function urlFor(id: string): Promise<string> {
@@ -75,15 +188,17 @@ async function recordPlay(skipped: boolean) {
   }).catch(() => {});
 }
 
-async function loadTrack(id: string, autoplay: boolean) {
+async function loadTrack(id: string, autoplay: boolean, fadeInMs = 0) {
   endedNaturally = false;
   const el = getAudio();
   try {
     el.src = await urlFor(id);
-    el.volume = masterMuted ? 0 : masterVolume;
+    elTrack.set(el, id);
+    resetFade(el, fadeInMs > 0 ? 0 : 1);
     updateMediaSession(id);
     if (autoplay) {
       el.play().catch(() => {});
+      if (fadeInMs > 0) fadeTo(el, 1, fadeInMs);
       send('POST', `/tracks/${id}/played`).catch(() => {});
     }
   } catch {
@@ -92,10 +207,7 @@ async function loadTrack(id: string, autoplay: boolean) {
 }
 
 function clearTrack() {
-  const el = getAudio();
-  el.pause();
-  el.removeAttribute('src');
-  el.load();
+  getPlayers().forEach(unload);
   usePlayback.setState({ position: 0, duration: 0, playing: false });
 }
 
@@ -112,7 +224,9 @@ async function preloadNext() {
  * Avança a partir de `from` com as funções puras da fila, pulando faixas
  * que ainda não estão prontas. Só o resultado final entra no store.
  */
-async function go(from: Q.QueueState, advance: Advance): Promise<string | null> {
+async function go(from: Q.QueueState, advance: Advance, fadeInMs = 0): Promise<string | null> {
+  // Troca manual de faixa durante um crossfade: corta a faixa que estava saindo.
+  if (fadeInMs === 0) stopOutgoing();
   if (!endedNaturally) {
     void recordPlay(true);
   }
@@ -133,11 +247,38 @@ async function go(from: Q.QueueState, advance: Advance): Promise<string | null> 
   const id = step.trackId !== null && config.isReady(step.trackId) ? step.trackId : null;
   store.setState({ ...step.state, currentTrackId: id });
 
-  if (id) await loadTrack(id, true);
+  if (id) await loadTrack(id, true, fadeInMs);
   else clearTrack();
 
   preloadNext();
   return id;
+}
+
+/**
+ * Chamado a cada `timeupdate`: perto do fim da faixa, começa a próxima no outro
+ * <audio> enquanto esta perde volume. Faixas curtas, repeat 'one' e fim da fila
+ * seguem o fluxo normal (evento 'ended').
+ */
+function maybeStartCrossfade(el: HTMLAudioElement) {
+  const secs = settings.crossfadeSeconds;
+  if (secs <= 0 || el !== getAudio() || el.paused || fades.has(el)) return;
+  const duration = el.duration;
+  if (!Number.isFinite(duration) || duration < secs * 2 + 1) return;
+  const remaining = duration - el.currentTime;
+  if (remaining > secs || remaining <= 0.3) return;
+
+  const state = store.getState();
+  if (state.repeat === 'one') return;
+  const upcoming = Q.next(state).trackId;
+  if (!upcoming || !config.isReady(upcoming)) return;
+
+  void recordPlay(false);
+  endedNaturally = true;
+
+  const ms = remaining * 1000;
+  fadeTo(el, 0, ms, () => unload(el));
+  activeIndex = 1 - activeIndex;
+  void go(state, Q.next, ms);
 }
 
 /** Ações do player. Use estas funções na interface (elas tocam o áudio). */
@@ -183,7 +324,21 @@ export const playerControls = {
       return;
     }
     if (el.paused) el.play().catch(() => {});
-    else el.pause();
+    else playerControls.pause();
+  },
+
+  play(): void {
+    const el = getAudio();
+    if (el.getAttribute('src')) el.play().catch(() => {});
+    else void playerControls.togglePlay();
+  },
+
+  pause(): void {
+    stopOutgoing();
+    const el = getAudio();
+    // Pausar no meio do fade de entrada: volta ao volume cheio ao retomar.
+    if (fades.has(el)) resetFade(el, 1);
+    el.pause();
   },
 
   seek(seconds: number): void {
@@ -193,7 +348,13 @@ export const playerControls = {
   setVolume(volume: number): void {
     masterVolume = volume;
     masterMuted = volume === 0;
-    getAudio().volume = volume;
+    getPlayers().forEach(applyVolume);
+  },
+
+  /** Aplica as configurações de crossfade/normalização (vindas de /api/settings). */
+  configure(next: Partial<PlayerSettings>): void {
+    settings = { ...settings, ...next };
+    getPlayers().forEach(applyVolume);
   },
 
   setShuffle(enabled: boolean): void {
@@ -224,41 +385,50 @@ export function usePlayerAudio(cfg: PlayerAudioConfig) {
   }, [cfg]);
 
   useEffect(() => {
-    const el = getAudio();
+    const cleanups = getPlayers().map((el) => {
+      // Só o <audio> ativo conversa com a interface; o outro está saindo num crossfade.
+      const isActive = () => el === getAudio();
 
-    const sync = () =>
-      usePlayback.setState({
-        position: el.currentTime,
-        duration: Number.isFinite(el.duration) ? el.duration : 0,
-        playing: !el.paused,
-      });
+      const sync = () => {
+        if (!isActive()) return;
+        usePlayback.setState({
+          position: el.currentTime,
+          duration: Number.isFinite(el.duration) ? el.duration : 0,
+          playing: !el.paused,
+        });
+      };
+      const onTime = () => {
+        sync();
+        maybeStartCrossfade(el);
+      };
 
-    // Faixa com erro de reprodução (ou removida do servidor): pula para a próxima.
-    const onError = () => {
-      if (el.getAttribute('src')) playerControls.next();
-    };
-    const onEnded = () => {
-      void recordPlay(false);
-      endedNaturally = true;
-      void playerControls.ended();
-    };
+      // Faixa com erro de reprodução (ou removida do servidor): pula para a próxima.
+      const onError = () => {
+        if (isActive() && el.getAttribute('src')) playerControls.next();
+      };
+      const onEnded = () => {
+        if (!isActive()) return;
+        void recordPlay(false);
+        endedNaturally = true;
+        void playerControls.ended();
+      };
 
-    const events: [keyof HTMLMediaElementEventMap, () => void][] = [
-      ['ended', onEnded],
-      ['error', onError],
-      ['timeupdate', sync],
-      ['durationchange', sync],
-      ['play', sync],
-      ['pause', sync],
-    ];
-    events.forEach(([name, fn]) => el.addEventListener(name, fn));
+      const events: [keyof HTMLMediaElementEventMap, () => void][] = [
+        ['ended', onEnded],
+        ['error', onError],
+        ['timeupdate', onTime],
+        ['durationchange', sync],
+        ['play', sync],
+        ['pause', sync],
+      ];
+      events.forEach(([name, fn]) => el.addEventListener(name, fn));
+      return () => events.forEach(([name, fn]) => el.removeEventListener(name, fn));
+    });
 
     if ('mediaSession' in navigator) {
       const ms = navigator.mediaSession;
-      ms.setActionHandler('play', () => {
-        el.play().catch(() => {});
-      });
-      ms.setActionHandler('pause', () => el.pause());
+      ms.setActionHandler('play', () => playerControls.play());
+      ms.setActionHandler('pause', () => playerControls.pause());
       ms.setActionHandler('nexttrack', () => {
         playerControls.next();
       });
@@ -267,8 +437,6 @@ export function usePlayerAudio(cfg: PlayerAudioConfig) {
       });
     }
 
-    return () => {
-      events.forEach(([name, fn]) => el.removeEventListener(name, fn));
-    };
+    return () => cleanups.forEach((fn) => fn());
   }, []);
 }

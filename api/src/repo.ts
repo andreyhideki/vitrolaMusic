@@ -19,6 +19,8 @@ export interface TrackDto {
   genreId: number | null;
   genreName: string | null;
   bitrateKbps: number | null;
+  /** Loudness integrada em LUFS (null = ainda não analisada). */
+  loudnessLufs: number | null;
 }
 
 export interface AlbumDto {
@@ -48,7 +50,7 @@ SELECT t.id, t.title, t.duration_seconds, t.track_number, t.download_status, t.e
        t.album_id, al.title AS album_title, al.cover_url, al.release_year,
        t.artist_id, ar.name AS artist_name,
        al.genre_id, g.name AS genre_name,
-       t.bitrate_kbps
+       t.bitrate_kbps, t.loudness_lufs
 FROM tracks t
 JOIN albums al ON al.id = t.album_id
 JOIN artists ar ON ar.id = t.artist_id
@@ -77,6 +79,7 @@ const toTrack = (r: any): TrackDto => ({
   genreId: r.genre_id ?? null,
   genreName: r.genre_name ?? null,
   bitrateKbps: r.bitrate_kbps ?? null,
+  loudnessLufs: r.loudness_lufs ?? null,
 });
 
 const toAlbum = (r: any): AlbumDto => ({

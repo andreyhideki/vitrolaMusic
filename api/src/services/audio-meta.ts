@@ -18,3 +18,25 @@ export async function getAudioBitrate(filePath: string): Promise<number | null> 
     return null;
   }
 }
+
+/**
+ * Mede a loudness integrada (EBU R128, em LUFS) com o filtro `loudnorm` do ffmpeg,
+ * que só analisa (saída descartada) e imprime um JSON no fim do stderr.
+ * Retorna null se a análise falhar ou se a faixa for silenciosa.
+ */
+export async function getLoudness(filePath: string): Promise<number | null> {
+  try {
+    const { stderr } = await execFileAsync('ffmpeg', [
+      '-hide_banner', '-nostats',
+      '-i', filePath,
+      '-map', 'a:0',
+      '-af', 'loudnorm=print_format=json',
+      '-f', 'null', '-',
+    ], { timeout: 180_000, maxBuffer: 10 * 1024 * 1024 });
+    const match = /"input_i"\s*:\s*"([^"]+)"/.exec(stderr);
+    const lufs = match ? Number(match[1]) : NaN;
+    return Number.isFinite(lufs) ? Math.round(lufs * 100) / 100 : null;
+  } catch {
+    return null;
+  }
+}

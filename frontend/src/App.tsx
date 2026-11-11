@@ -5,7 +5,7 @@ import { useNav, View } from './nav';
 import { useSidebarCollapsed, useUi } from './ui';
 import { useScreenSize } from './useMediaQuery';
 import { usePlayerStore } from './player/store';
-import { PlayerAudioConfig, usePlayerAudio } from './player/usePlayerAudio';
+import { PlayerAudioConfig, playerControls, usePlayerAudio } from './player/usePlayerAudio';
 import { useTheme } from './theme';
 import { takeTokenFromUrl, useAuth } from './auth';
 import { LoginView } from './views/LoginView';
@@ -81,6 +81,7 @@ function AuthenticatedApp() {
     api<AppSettings>('/settings')
       .then((s) => {
         streamWithoutDownload = s.streamWithoutDownload;
+        playerControls.configure({ crossfadeSeconds: s.crossfadeSeconds, normalizeVolume: s.normalizeVolume });
         setSettingsLoaded(true);
       })
       .catch(() => setSettingsLoaded(true));
@@ -108,6 +109,10 @@ function AuthenticatedApp() {
         album: t.albumTitle,
         coverUrl: t.coverUrl ?? undefined,
       };
+    },
+    getLoudness: (id) => {
+      const track = useLibrary.getState().byId[id];
+      return track?.downloadStatus === 'ready' ? track.loudnessLufs : null;
     },
     streamUrl: (id) => {
       const track = useLibrary.getState().byId[id];

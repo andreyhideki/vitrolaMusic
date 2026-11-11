@@ -863,6 +863,14 @@ body.theme-light .warning-box { background: #ff6b6b18; color: #b53b3b; }
   gap: 8px;
 }
 
+input.range {
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  accent-color: var(--accent);
+}
+
 .option-group {
   display: flex;
   gap: 8px;

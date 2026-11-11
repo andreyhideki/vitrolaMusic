@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { api, AppSettings, errorMessage, send } from '../api';
 import { useAuth } from '../auth';
+import { playerControls } from '../player/usePlayerAudio';
 
 interface Props {
   open: boolean;
@@ -27,6 +28,8 @@ export function SettingsModal({ open, onClose }: Props) {
     streamWithoutDownload: false,
     cleanupUnusedAfterDays: 0,
     youtubeCookiesPath: '',
+    crossfadeSeconds: 0,
+    normalizeVolume: false,
   });
   const [showCookiesHelp, setShowCookiesHelp] = useState(false);
   const [cookiesText, setCookiesText] = useState('');
@@ -60,6 +63,7 @@ export function SettingsModal({ open, onClose }: Props) {
         ...(cookiesText.trim() ? { youtubeCookiesContent: cookiesText } : {}),
       });
       setSettings(s);
+      playerControls.configure({ crossfadeSeconds: s.crossfadeSeconds, normalizeVolume: s.normalizeVolume });
       setCookiesText('');
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -138,6 +142,42 @@ export function SettingsModal({ open, onClose }: Props) {
               <span>Tocar via streaming externo sem baixar</span>
             </label>
             <p className="hint">Quando ativo, o player toca diretamente da fonte externa se o arquivo ainda não estiver baixado.</p>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="crossfade">
+              Transição entre músicas (crossfade):{' '}
+              <strong>{settings.crossfadeSeconds > 0 ? `${settings.crossfadeSeconds} s` : 'desligada'}</strong>
+            </label>
+            <input
+              id="crossfade"
+              type="range"
+              className="range"
+              min={0}
+              max={12}
+              step={1}
+              value={settings.crossfadeSeconds}
+              onChange={(e) => setSettings({ ...settings, crossfadeSeconds: Number(e.target.value) })}
+            />
+            <p className="hint">
+              Nos últimos segundos da música, o volume vai diminuindo enquanto a próxima já começa a tocar.
+              Use 0 para esperar a música terminar.
+            </p>
+          </div>
+
+          <div className="form-group">
+            <label className="toggle">
+              <input
+                type="checkbox"
+                checked={settings.normalizeVolume}
+                onChange={(e) => setSettings({ ...settings, normalizeVolume: e.target.checked })}
+              />
+              <span>Equalizar o volume entre as músicas</span>
+            </label>
+            <p className="hint">
+              Ajusta o volume de cada música pela intensidade medida dela, para que todas toquem num nível
+              parecido. Músicas muito altas ficam mais baixas, então talvez seja preciso subir o volume geral.
+            </p>
           </div>
 
           <div className="form-group">

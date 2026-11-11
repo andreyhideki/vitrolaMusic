@@ -6,7 +6,7 @@ import { db } from '../db.js';
 import * as repo from '../repo.js';
 import { getEffectiveMediaDir } from '../settings.js';
 import { externalProvider, isTmpExternal } from './external.js';
-import { getAudioBitrate } from './audio-meta.js';
+import { getAudioBitrate, getLoudness } from './audio-meta.js';
 
 export interface TrackForDownload {
   id: number;
@@ -117,9 +117,10 @@ async function run(trackId: number): Promise<void> {
     }
 
     const bitrateKbps = await getAudioBitrate(dest);
+    const loudnessLufs = await getLoudness(dest);
 
-    db.prepare("UPDATE tracks SET download_status = 'ready', file_path = ?, bitrate_kbps = ?, error = NULL WHERE id = ?")
-      .run(dest, bitrateKbps, trackId);
+    db.prepare("UPDATE tracks SET download_status = 'ready', file_path = ?, bitrate_kbps = ?, loudness_lufs = ?, error = NULL WHERE id = ?")
+      .run(dest, bitrateKbps, loudnessLufs, trackId);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro desconhecido';
     const { attempts } = db.prepare('SELECT attempts FROM tracks WHERE id = ?').get(trackId) as { attempts: number };

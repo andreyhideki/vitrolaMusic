@@ -25,7 +25,7 @@
 - Banco SQLite: `./data/vitrola.db`. Modo WAL ativado em `api/src/db.ts`.
 - Mídia baixada: `./data/media` por padrão. Pode ser sobrescrito pela configuração `mediaDir` (tabela `settings`), que é **relativa a `DATA_DIR` e precisa ficar dentro dela**; valores fora disso são rejeitados (400) ou ignorados se já estiverem salvos.
 - Pasta de importação: `./data/import`. Arquivos locais nomeados como `Artista - Título.mp3` são detectados pelo `localFolderProvider`.
-- Migrations são manuais e idempotentes: verificações de coluna em `api/src/db.ts` + `CREATE TABLE IF NOT EXISTS`.
+- Migrations são manuais e idempotentes: verificações de coluna em `api/src/db.ts` + `CREATE TABLE IF NOT EXISTS`. As verificações de coluna (`hasColumn` + `ALTER TABLE`) ficam **depois** do bloco `CREATE TABLE`; antes dele, um banco novo falha com `no such table`.
 - **Atenção:** ao iniciar, `resumeDownloads()` enfileira **todas** as faixas com `download_status = 'pending'`.
 
 ## Downloads e fontes de áudio
@@ -40,6 +40,7 @@
 - O `externalProvider` (`api/src/services/external.ts`) usa `--extractor-args "youtube:player_client=android"` para contornar restrições SABR que bloqueiam o cliente web.
 - Downloads e streams tentam primeiro **sem cookies** (conexão anônima); apenas se essa tentativa falhar e houver cookies configurados é que os cookies são usados. Isso evita que contas no experimento SABR-only do YouTube fiquem sem formatos de áudio disponíveis.
 - Nome final dos arquivos: `Artista - Álbum - Título.mp3`.
+- A coluna `tracks.loudness_lufs` guarda a loudness integrada (EBU R128) medida por `getLoudness()` (`api/src/services/audio-meta.ts`, filtro `loudnorm` do `ffmpeg`) logo após cada download. Ao iniciar, `analyzeMissingLoudness()` (`api/src/services/loudness.ts`) mede, uma por vez e em segundo plano, as faixas `ready` que ainda estão com `NULL`. O valor vai para o frontend como `TrackDto.loudnessLufs`.
 - Mensagens de erro do `yt-dlp` são resumidas (última linha `ERROR:`, sem caminhos, até 300 caracteres) antes de ir para `tracks.error`; o stderr completo vai para o log da API.
 - `GET /api/tracks/:id/stream-url` faz proxy do stream externo com backpressure, aborta o upstream quando o cliente desconecta e limita a 3 streams simultâneos (429 acima disso).
 - Status de download (`pending` | `downloading` | `ready` | `failed`) fica na tabela `tracks`. O endpoint `GET /api/albums/:id` normaliza o status pela existência real do arquivo no disco: se o arquivo existe, é `ready`; se não existe, nunca é `ready`.
@@ -86,6 +87,8 @@
 - Capas de álbum na página inicial têm botão de play em destaque (borda verde) que toca o álbum; vira pause (borda vermelha) quando o álbum está sendo reproduzido.
 - Importação de faixas e álbuns do catálogo externo, com enfileiramento automático de downloads.
 - Player com fila, shuffle, repeat, "tocar a seguir", "adicionar à fila", Media Session, pré-carregamento da próxima faixa e persistência de volume entre faixas.
+- Crossfade configurável (`crossfadeSeconds`, 0–12 s, slider nas Configurações): o player usa **dois** `<audio>` (`getAudio()` é o ativo, `getOutgoing()` o que está saindo). No `timeupdate`, quando faltam N segundos, `maybeStartCrossfade()` troca o ativo, inicia a próxima faixa com fade-in e faz fade-out da anterior (curva de potência constante). Não acontece com repeat "one", fim da fila, próxima faixa não pronta ou faixas com menos de 2N+1 s. Pular/pausar durante o fade corta a faixa que estava saindo.
+- Equalização de volume (`normalizeVolume`): o volume de cada `<audio>` é `volume geral × ganho de normalização × fade` (`applyVolume()`). O ganho leva a faixa ao alvo de -16 LUFS, só atenuando (o `volume` do elemento não passa de 1), limitado a -15 dB; faixas sem análise (ex.: streaming) assumem -11 LUFS. As configurações chegam ao player por `playerControls.configure()` (no `App` ao carregar e no `SettingsModal` ao salvar).
 - Playlists: criar, editar, excluir, adicionar/remover faixas, reordenar arrastando pela alça ⋮⋮ (`@dnd-kit/sortable`; mouse, toque com 150 ms de espera e teclado; atualização otimista + `PATCH /playlists/:id/order`), buscar músicas na biblioteca para adicionar e sugestões por gênero (até 10 faixas).
 - Tela de álbum (`frontend/src/views/AlbumView.tsx`) mostrando faixas baixadas e não baixadas, com botão "Importar" e barra de progresso do download.
 - Pré-visualização de álbum (`frontend/src/views/AlbumPreviewView.tsx`) com importação individual, importação do álbum inteiro e barra de progresso do download.
@@ -116,4 +119,5 @@
 - Layout responsivo: a altura do player é a variável CSS `--player-h` (96px no desktop, 112px no mobile); use-a em `calc()` em vez de valores fixos. O tamanho de tela fica em `useUi().screen` (definido pelo `App`); use `useSidebarCollapsed()` para o estado efetivo do menu. O recolhimento automático por tamanho de tela **não** é gravado no `localStorage` (só a preferência do desktop). Mantenha os breakpoints de `useMediaQuery.ts` e `styles.css` iguais.
 - Cookies do YouTube no modal: "Salvar" só envia `youtubeCookiesContent` quando o campo tem conteúdo (string vazia **remove** os cookies no backend); a remoção tem botão próprio "Remover cookies"; "Carregar arquivo .txt" lê o arquivo exportado (até 1 MB) para o campo.
 - `npm audit` do frontend ainda aponta itens moderados/baixos em `workbox-build` (dependência de build do `vite-plugin-pwa`); não são exploráveis em runtime e a única correção sugerida é rebaixar o plugin.
+- Player: nunca altere `el.volume` diretamente; use `applyVolume(el)` / `playerControls.setVolume()` para respeitar normalização e fades. Listeners de `<audio>` devem ignorar eventos do elemento que não é o ativo. No iOS o `volume` do `<audio>` é somente leitura: o crossfade vira apenas sobreposição e a normalização não tem efeito.
 - O Service Worker do PWA está habilitado também em desenvolvimento (`devOptions.enabled: true`). Se comportamentos estranhos de cache atrapalharem o hot reload, desabilite temporariamente no `vite.config.ts` ou use uma aba anônima.

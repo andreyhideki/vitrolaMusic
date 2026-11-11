@@ -32,7 +32,13 @@ export interface AppSettings {
   streamWithoutDownload: boolean;
   cleanupUnusedAfterDays: number;
   youtubeCookiesPath: string;
+  /** Duração do crossfade entre faixas, em segundos (0 = desativado). */
+  crossfadeSeconds: number;
+  /** Equaliza o volume entre faixas usando a loudness medida de cada uma. */
+  normalizeVolume: boolean;
 }
+
+export const MAX_CROSSFADE_SECONDS = 12;
 
 const DEFAULTS: AppSettings = {
   audioQuality: 'medium',
@@ -40,6 +46,8 @@ const DEFAULTS: AppSettings = {
   streamWithoutDownload: false,
   cleanupUnusedAfterDays: 0,
   youtubeCookiesPath: '',
+  crossfadeSeconds: 0,
+  normalizeVolume: false,
 };
 
 function get(key: keyof AppSettings): string {
@@ -69,6 +77,8 @@ export function getSettings(): AppSettings {
     streamWithoutDownload: boolOf(get('streamWithoutDownload'), DEFAULTS.streamWithoutDownload),
     cleanupUnusedAfterDays: numberOf(get('cleanupUnusedAfterDays'), DEFAULTS.cleanupUnusedAfterDays),
     youtubeCookiesPath: get('youtubeCookiesPath') ? COOKIES_FILE : DEFAULTS.youtubeCookiesPath,
+    crossfadeSeconds: Math.min(MAX_CROSSFADE_SECONDS, numberOf(get('crossfadeSeconds'), DEFAULTS.crossfadeSeconds)),
+    normalizeVolume: boolOf(get('normalizeVolume'), DEFAULTS.normalizeVolume),
   };
 }
 
@@ -83,6 +93,11 @@ export async function updateSettings(s: Partial<Omit<AppSettings, 'youtubeCookie
   if (s.audioQuality !== undefined) set('audioQuality', s.audioQuality);
   if (s.streamWithoutDownload !== undefined) set('streamWithoutDownload', s.streamWithoutDownload ? '1' : '0');
   if (s.cleanupUnusedAfterDays !== undefined) set('cleanupUnusedAfterDays', String(Math.floor(s.cleanupUnusedAfterDays)));
+
+  if (s.crossfadeSeconds !== undefined) {
+    set('crossfadeSeconds', String(Math.min(MAX_CROSSFADE_SECONDS, Math.max(0, Math.round(s.crossfadeSeconds)))));
+  }
+  if (s.normalizeVolume !== undefined) set('normalizeVolume', s.normalizeVolume ? '1' : '0');
 
   if (s.youtubeCookiesContent !== undefined) {
     const content = s.youtubeCookiesContent.trim();

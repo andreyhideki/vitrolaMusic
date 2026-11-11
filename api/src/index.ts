@@ -17,6 +17,7 @@ import { playsRouter } from './routes/plays.js';
 import { analyticsRouter } from './routes/analytics.js';
 import { resumeDownloads } from './services/downloader.js';
 import { startCleanupScheduler } from './services/cleanup.js';
+import { analyzeMissingLoudness } from './services/loudness.js';
 
 const app = express();
 
@@ -92,4 +93,5 @@ app.listen(config.port, () => {
   console.log(`Vitrola API em http://localhost:${config.port}`);
   resumeDownloads();
   startCleanupScheduler();
+  void analyzeMissingLoudness();
 });

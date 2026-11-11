@@ -27,8 +27,8 @@ previewRouter.get('/album', async (req, res) => {
 
   const tracks = (a.tracks?.data ?? []).map((t: any, i: number) => {
     const extId = `catalog:track:${t.id}`;
-    const local = db.prepare('SELECT id, download_status, file_path, bitrate_kbps FROM tracks WHERE ext_id = ?').get(extId) as
-      | { id: number; download_status: string; file_path: string | null; bitrate_kbps: number | null }
+    const local = db.prepare('SELECT id, download_status, file_path, bitrate_kbps, loudness_lufs FROM tracks WHERE ext_id = ?').get(extId) as
+      | { id: number; download_status: string; file_path: string | null; bitrate_kbps: number | null; loudness_lufs: number | null }
       | undefined;
     const isReady = local?.download_status === 'ready';
     return {
@@ -47,6 +47,7 @@ previewRouter.get('/album', async (req, res) => {
       genreId: null,
       genreName: null,
       bitrateKbps: isReady ? (local?.bitrate_kbps ?? null) : null,
+      loudnessLufs: isReady ? (local?.loudness_lufs ?? null) : null,
       catalogId: String(t.id),
       localTrackId: local?.id ?? null,
     };

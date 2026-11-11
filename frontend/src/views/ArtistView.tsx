@@ -36,6 +36,7 @@ export function ArtistView({ id }: { id: number }) {
           genreId: a.genreId,
           genreName: a.genreName,
           bitrateKbps: null,
+          loudnessLufs: null,
         })));
         setData(d);
       })

@@ -18,6 +18,8 @@ export interface TrackDto {
   genreId: number | null;
   genreName: string | null;
   bitrateKbps: number | null;
+  /** Loudness integrada em LUFS (null = ainda não analisada). */
+  loudnessLufs: number | null;
 }
 
 export interface AlbumDto {
@@ -53,6 +55,8 @@ export interface AppSettings {
   streamWithoutDownload: boolean;
   cleanupUnusedAfterDays: number;
   youtubeCookiesPath: string;
+  crossfadeSeconds: number;
+  normalizeVolume: boolean;
 }
 
 export interface ArtistDto {

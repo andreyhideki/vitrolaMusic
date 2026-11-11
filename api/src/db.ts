@@ -10,18 +10,6 @@ function hasColumn(table: string, column: string): boolean {
   return cols.some((c) => c.name === column);
 }
 
-if (!hasColumn('albums', 'genre_id')) {
-  db.exec(`ALTER TABLE albums ADD COLUMN genre_id INTEGER REFERENCES genres(id)`);
-}
-
-if (!hasColumn('tracks', 'bitrate_kbps')) {
-  db.exec(`ALTER TABLE tracks ADD COLUMN bitrate_kbps INTEGER`);
-}
-
-if (!hasColumn('tracks', 'last_played_at')) {
-  db.exec(`ALTER TABLE tracks ADD COLUMN last_played_at TEXT`);
-}
-
 db.exec(`
 CREATE TABLE IF NOT EXISTS artists (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -98,6 +86,24 @@ CREATE TABLE IF NOT EXISTS settings (
   value TEXT NOT NULL
 );
 `);
+
+// Migrations de colunas: rodam depois do CREATE TABLE para funcionar também em banco novo.
+if (!hasColumn('albums', 'genre_id')) {
+  db.exec(`ALTER TABLE albums ADD COLUMN genre_id INTEGER REFERENCES genres(id)`);
+}
+
+if (!hasColumn('tracks', 'bitrate_kbps')) {
+  db.exec(`ALTER TABLE tracks ADD COLUMN bitrate_kbps INTEGER`);
+}
+
+if (!hasColumn('tracks', 'last_played_at')) {
+  db.exec(`ALTER TABLE tracks ADD COLUMN last_played_at TEXT`);
+}
+
+// Loudness integrada (LUFS) medida pelo ffmpeg, usada na normalização de volume do player.
+if (!hasColumn('tracks', 'loudness_lufs')) {
+  db.exec(`ALTER TABLE tracks ADD COLUMN loudness_lufs REAL`);
+}
 
 // Migra prefixos de catálogo usados por versões anteriores.
 const LEGACY_CATALOG_PREFIX = 'deezer:';
