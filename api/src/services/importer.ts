@@ -28,6 +28,8 @@ export async function importAlbum(catalogId: string): Promise<number> {
 
   // Observação: álbuns muito grandes podem vir paginados (tracks.next); não tratado nesta versão.
   const tracks: any[] = a.tracks?.data ?? [];
+  // Guarda a lista de faixas: a tela do álbum abre sem consultar o catálogo pela rede.
+  repo.saveAlbumCatalog(albumId, repo.toCatalogTracks(tracks));
   tracks.forEach((t, i) => {
     const trackId = repo.upsertTrack(`catalog:track:${t.id}`, {
       title: t.title,
@@ -62,6 +64,7 @@ export async function importTrack(catalogId: string): Promise<number> {
     releaseYear: yearOf(full?.release_date),
     coverUrl: full?.cover_big ?? t.album.cover_big ?? null,
   });
+  if (full?.tracks?.data) repo.saveAlbumCatalog(albumId, repo.toCatalogTracks(full.tracks.data));
 
   const trackId = repo.upsertTrack(`catalog:track:${t.id}`, {
     title: t.title,

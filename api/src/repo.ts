@@ -118,6 +118,45 @@ export function getAlbumExtId(id: number): string | null {
   return r?.ext_id ?? null;
 }
 
+/** Faixa do catálogo externo guardada em `album_catalog` (só o que a tela do álbum usa). */
+export interface CatalogTrack {
+  catalogId: string;
+  title: string;
+  durationSeconds: number | null;
+  trackNumber: number | null;
+  artistName: string | null;
+}
+
+/** Converte as faixas de `catalogApi.album()` para o formato guardado. */
+export function toCatalogTracks(remoteTracks: any[]): CatalogTrack[] {
+  return remoteTracks.map((t, i) => ({
+    catalogId: String(t.id),
+    title: t.title,
+    durationSeconds: t.duration ?? null,
+    trackNumber: t.track_position ?? i + 1,
+    artistName: t.artist?.name ?? null,
+  }));
+}
+
+export function saveAlbumCatalog(albumId: number, tracks: CatalogTrack[]): void {
+  db.prepare(
+    `INSERT INTO album_catalog (album_id, tracks_json, fetched_at) VALUES (?, ?, datetime('now'))
+     ON CONFLICT(album_id) DO UPDATE SET tracks_json = excluded.tracks_json, fetched_at = excluded.fetched_at`,
+  ).run(albumId, JSON.stringify(tracks));
+}
+
+export function getAlbumCatalog(albumId: number): { tracks: CatalogTrack[]; fetchedAt: string } | null {
+  const r = db.prepare('SELECT tracks_json, fetched_at FROM album_catalog WHERE album_id = ?').get(albumId) as
+    | { tracks_json: string; fetched_at: string }
+    | undefined;
+  if (!r) return null;
+  try {
+    return { tracks: JSON.parse(r.tracks_json) as CatalogTrack[], fetchedAt: r.fetched_at };
+  } catch {
+    return null;
+  }
+}
+
 export function getTrackByExtId(extId: string): TrackDto | null {
   const r = db.prepare(`${TRACK_SELECT} WHERE t.ext_id = ?`).get(extId);
   return r ? toTrack(r) : null;
@@ -266,6 +305,7 @@ export function deleteAlbum(id: number): { filePaths: string[] } {
   for (const t of tracks) {
     db.prepare('DELETE FROM tracks WHERE id = ?').run(t.id);
   }
+  db.prepare('DELETE FROM album_catalog WHERE album_id = ?').run(id);
   db.prepare('DELETE FROM albums WHERE id = ?').run(id);
   return { filePaths };
 }
