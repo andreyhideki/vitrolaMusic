@@ -82,8 +82,12 @@ export async function resolveStreamUrl(trackId: string, apiUrl: string): Promise
   return playableFileUrl(filePath);
 }
 
-/** Há downloads na fila ou em andamento? (enquanto houver, o app fica vivo em segundo plano) */
-export function hasActiveDownloads(): boolean {
+/** Quantas faixas estão na fila ou baixando (enquanto houver, o app fica vivo em segundo plano). */
+export function pendingDownloads(): number {
   const r = db.prepare("SELECT COUNT(*) AS c FROM tracks WHERE download_status IN ('pending', 'downloading')").get() as { c: number };
-  return r.c > 0;
+  return r.c;
+}
+
+export function hasActiveDownloads(): boolean {
+  return pendingDownloads() > 0;
 }

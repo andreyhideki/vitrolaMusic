@@ -34,7 +34,7 @@ async function start(): Promise<void> {
   root.render(<App />);
 
   server.startBackgroundTasks();
-  startKeepAlive(server.hasActiveDownloads);
+  startKeepAlive(server.pendingDownloads);
 }
 
 start().catch((err) => {

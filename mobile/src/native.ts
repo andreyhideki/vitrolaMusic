@@ -18,7 +18,13 @@ export interface VitrolaPlugin {
   /** Interrompe um `exec` em andamento. */
   kill(options: { id: string }): Promise<void>;
   /** Liga/desliga o serviço em primeiro plano que mantém o app vivo com a tela apagada. */
-  setKeepAlive(options: { playing: boolean; downloading: boolean }): Promise<void>;
+  setKeepAlive(options: {
+    playing: boolean;
+    downloading: boolean;
+    /** Posição na leva de downloads ("Baixando 2 de 100"). */
+    downloadCurrent?: number;
+    downloadTotal?: number;
+  }): Promise<void>;
   /** Atualiza o yt-dlp (o YouTube muda com frequência). */
   updateYtDlp(): Promise<{ status: string; version: string }>;
   addListener(event: 'execOutput', fn: (e: { id: string; line: string }) => void): Promise<PluginListenerHandle>;
