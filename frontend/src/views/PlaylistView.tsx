@@ -8,6 +8,9 @@ import { useLibrary } from '../library';
 import { useNav } from '../nav';
 import { playerControls } from '../player/usePlayerAudio';
 import { fmtBitrate, fmtDuration, STATUS_LABEL } from '../format';
+import { usePlayerStore } from '../player/store';
+import { usePlayback } from '../player/playback';
+import { PlayingIcon, TrackPlayButton } from '../components/TrackPlayButton';
 
 /** Linha da playlist reordenável por arrastar (pela alça ⋮⋮). */
 function SortableRow({ id, className, children }: { id: number; className: string; children: ReactNode }) {
@@ -35,6 +38,8 @@ interface PlaylistViewState {
 }
 
 export function PlaylistView({ id }: { id: number }) {
+  const currentTrackId = usePlayerStore((s) => s.currentTrackId);
+  const playing = usePlayback((s) => s.playing);
   const { saveState, getState } = useNav();
   const saved = getState<PlaylistViewState>({ kind: 'playlist', id });
   const [detail, setDetail] = useState<PlaylistDetail | null>(null);
@@ -189,13 +194,11 @@ export function PlaylistView({ id }: { id: number }) {
           const t = byId[String(e.track.id)] ?? e.track;
           const ready = t.downloadStatus === 'ready';
           return (
-            <SortableRow key={e.entryId} id={e.entryId} className={`track ${ready ? '' : 'unavailable'}`}>
-              <button className="play-btn" disabled={!ready} onClick={() => playerControls.playFrom(ids, i, source)} aria-label={`Tocar ${t.title}`}>
-                {ready ? '▶' : '·'}
-              </button>
-              <span className="num muted">{i + 1}</span>
+            <SortableRow key={e.entryId} id={e.entryId} className={`track ${ready ? '' : 'unavailable'} ${String(t.id) === currentTrackId ? 'playing' : ''}`}>
+              <TrackPlayButton trackId={t.id} title={t.title} ready={ready} onPlay={() => playerControls.playFrom(ids, i, source)} />
+              <span className="num muted">{String(t.id) === currentTrackId && playing ? <PlayingIcon /> : i + 1}</span>
               <div className="info">
-                <div>{t.title}</div>
+                <div className="title">{t.title}</div>
                 <div className="muted">
                   {t.artistName} · {t.albumTitle}
                 </div>
@@ -225,9 +228,7 @@ export function PlaylistView({ id }: { id: number }) {
         <ol className="tracks">
           {searchResults.map((t) => (
             <li key={t.id} className="track">
-              <button className="play-btn" disabled={t.downloadStatus !== 'ready'} onClick={() => playerControls.playFrom([String(t.id)], 0)} aria-label={`Tocar ${t.title}`}>
-                {t.downloadStatus === 'ready' ? '▶' : '·'}
-              </button>
+              <TrackPlayButton trackId={t.id} title={t.title} ready={t.downloadStatus === 'ready'} onPlay={() => playerControls.playFrom([String(t.id)], 0)} />
               <div className="info">
                 <div>{t.title}</div>
                 <div className="muted">{t.artistName} · {t.albumTitle}</div>
@@ -248,9 +249,7 @@ export function PlaylistView({ id }: { id: number }) {
           <ol className="tracks">
             {suggestions.map((t) => (
               <li key={t.id} className="track">
-                <button className="play-btn" disabled={t.downloadStatus !== 'ready'} onClick={() => playerControls.playFrom([String(t.id)], 0)} aria-label={`Tocar ${t.title}`}>
-                  {t.downloadStatus === 'ready' ? '▶' : '·'}
-                </button>
+                <TrackPlayButton trackId={t.id} title={t.title} ready={t.downloadStatus === 'ready'} onPlay={() => playerControls.playFrom([String(t.id)], 0)} />
                 <div className="info">
                   <div>{t.title}</div>
                   <div className="muted">{t.artistName} · {t.albumTitle}</div>

@@ -673,6 +673,8 @@ button.small { padding: 4px 10px; font-size: 12px; }
 .track .num { width: 24px; text-align: right; }
 .track .info { flex: 1; min-width: 0; }
 .track .play-btn { width: 32px; height: 32px; padding: 0; }
+/* Faixa atual: ❚❚ enquanto toca, ▶ (continuar) quando pausada. */
+.track .play-btn.is-current { color: var(--accent); border-color: var(--accent); }
 .track select { max-width: 150px; }
 .track .track-actions { display: contents; }
 .track .more-toggle { display: none; }

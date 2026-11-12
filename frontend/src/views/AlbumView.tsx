@@ -6,6 +6,9 @@ import { useNotice } from '../notice';
 import { useNav } from '../nav';
 import { playerControls } from '../player/usePlayerAudio';
 import { fmtBitrate, fmtDuration, STATUS_LABEL } from '../format';
+import { usePlayerStore } from '../player/store';
+import { usePlayback } from '../player/playback';
+import { PlayingIcon, TrackPlayButton } from '../components/TrackPlayButton';
 
 interface AlbumResponse {
   album: AlbumDto;
@@ -18,6 +21,8 @@ interface ProgressInfo {
 }
 
 export function AlbumView({ id }: { id: number }) {
+  const currentTrackId = usePlayerStore((s) => s.currentTrackId);
+  const playing = usePlayback((s) => s.playing);
   const [data, setData] = useState<AlbumResponse | null>(null);
   const [error, setError] = useState('');
   const [importingTracks, setImportingTracks] = useState<Set<string>>(new Set());
@@ -192,6 +197,7 @@ export function AlbumView({ id }: { id: number }) {
 
   const { album, tracks } = data;
   const readyIds = tracks.filter((t) => t.downloadStatus === 'ready' && t.id > 0).map((t) => String(t.id));
+  const albumIsCurrent = !!currentTrackId && tracks.some((t) => t.id > 0 && String(t.id) === currentTrackId);
 
   return (
     <section>
@@ -207,7 +213,17 @@ export function AlbumView({ id }: { id: number }) {
         </div>
       </div>
       <div className="actions">
-        <button className="primary" disabled={readyIds.length === 0} onClick={() => playerControls.playPlaylist(readyIds, false, { kind: 'album', id })}>Tocar</button>
+        <button
+          className="primary"
+          disabled={readyIds.length === 0}
+          onClick={() => {
+            // Álbum já é o que está tocando: o botão pausa/continua em vez de recomeçar.
+            if (albumIsCurrent) return playing ? playerControls.pause() : playerControls.play();
+            void playerControls.playPlaylist(readyIds, false, { kind: 'album', id });
+          }}
+        >
+          {albumIsCurrent && playing ? 'Pausar' : albumIsCurrent ? 'Continuar' : 'Tocar'}
+        </button>
         <button disabled={readyIds.length === 0} onClick={() => playerControls.playPlaylist(readyIds, true, { kind: 'album', id })}>Aleatório</button>
         <button className="danger" onClick={askDeleteAlbum}>Excluir álbum</button>
       </div>
@@ -223,18 +239,18 @@ export function AlbumView({ id }: { id: number }) {
           const showProgress = downloading && (progress?.percent ?? 0) < 100;
 
           return (
-            <li key={`${t.id}-${i}`} className={`track ${ready ? '' : 'unavailable'}`}>
-              <button
-                className="play-btn"
-                disabled={!ready}
-                onClick={() => ready && playerControls.playFrom(readyIds, readyIds.indexOf(String(t.id)), { kind: 'album', id })}
-                aria-label={`Tocar ${t.title}`}
-              >
-                {ready ? '▶' : '·'}
-              </button>
-              <span className="num muted">{t.trackNumber ?? i + 1}</span>
+            <li key={`${t.id}-${i}`} className={`track ${ready ? '' : 'unavailable'} ${isLocal && String(t.id) === currentTrackId ? 'playing' : ''}`}>
+              <TrackPlayButton
+                trackId={isLocal ? t.id : null}
+                title={t.title}
+                ready={ready}
+                onPlay={() => playerControls.playFrom(readyIds, readyIds.indexOf(String(t.id)), { kind: 'album', id })}
+              />
+              <span className="num muted">
+                {isLocal && String(t.id) === currentTrackId && playing ? <PlayingIcon /> : (t.trackNumber ?? i + 1)}
+              </span>
               <div className="info">
-                <div>{t.title}</div>
+                <div className="title">{t.title}</div>
                 <div className="muted">{t.artistName}</div>
                 {showProgress && (
                   <div className="track-progress">
