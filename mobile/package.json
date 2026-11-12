@@ -22,23 +22,23 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "path-browserify": "^1.0.1",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "sql.js": "^1.16.0",
     "zustand": "^5.0.0"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.6.0",
-    "@types/better-sqlite3": "^7.6.11",
+    "@types/better-sqlite3": "^9.6.0",
     "@types/express": "^5.0.0",
-    "@types/node": "^22.7.0",
+    "@types/node": "^24.19.2",
     "@types/path-browserify": "^1.0.3",
-    "@types/react": "^18.3.5",
-    "@types/react-dom": "^18.3.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "@types/sql.js": "^1.4.11",
-    "@vitejs/plugin-react": "^6.2.1",
-    "typescript": "^5.6.2",
-    "vite": "^8.3.6",
+    "@vitejs/plugin-react": "^6.3.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
     "vitest": "^5.1.0"
   }
 }
