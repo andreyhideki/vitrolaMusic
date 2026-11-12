@@ -148,7 +148,7 @@ make mobile-test  # testa a API local pelos adaptadores Android
 - O APK é só **arm64-v8a** (celulares atuais), com cerca de 60 MB por causa do Python e do ffmpeg embarcados. Para emulador x86_64: `cd mobile/android && ./gradlew assembleDebug -PvitrolaAbis=arm64-v8a,x86_64`.
 - Não pode ser publicado na Play Store (a política proíbe baixar do YouTube). A instalação é manual: copie o APK para o celular e permita "instalar apps desconhecidos".
 - O app atualiza o `yt-dlp` sozinho no máximo uma vez por dia (o YouTube muda com frequência).
-- Enquanto toca ou baixa, o app mostra uma notificação fixa: é o serviço em primeiro plano que o mantém funcionando com a tela apagada.
+- Enquanto toca ou baixa, o app mostra uma notificação fixa: é o serviço em primeiro plano que o mantém funcionando com a tela apagada. Durante os downloads ela mostra o andamento ("Baixando 3 de 50", com barra de progresso); o total cresce se você importar outro álbum ou playlist no meio.
 - Pasta de importação (`Artista - Título.mp3`): `Android/data/app.vitrola.music/files/import`, acessível pelo cabo USB.
 - Os dados ficam no app e são apagados se ele for desinstalado.
 - A música continua com a tela apagada. Em celulares Xiaomi/Redmi (HyperOS/MIUI) e outros com economia de bateria agressiva, se ela parar depois de muito tempo, coloque o app em **Bateria → Sem restrições** nas informações do app.
@@ -168,13 +168,14 @@ Para depurar a interface no aparelho, abra `chrome://inspect` no Chrome do Windo
 
 ## Como as músicas chegam ao player
 
-1. Você busca na barra de pesquisa. A API consulta um catálogo público externo (metadados e capas, sem áudio).
-2. Ao importar uma faixa ou álbum, a API cria os registros locais e enfileira o download.
+1. Você busca na barra de pesquisa. Os resultados da biblioteca aparecem na hora; em paralelo a API consulta um catálogo público externo (metadados e capas, sem áudio), cujos álbuns, músicas e playlists entram na tela quando ele responde. Sem internet, a busca mostra só a biblioteca e um aviso.
+2. Ao importar uma faixa, um álbum ou uma playlist, a API cria os registros locais e enfileira os downloads. Uma playlist importada vira uma playlist do app; importar de novo a mesma só acrescenta as faixas que faltam.
 3. O download usa **fontes de áudio** (`api/src/services/downloader.ts`). A ordem de busca é:
    1. `localFolderProvider`: procura o arquivo na pasta `IMPORT_DIR` pelo nome (`Artista - Título.mp3`, por exemplo) e copia para `data/media`.
    2. provedor externo (`yt-dlp`): se não encontrar localmente, busca a faixa em uma fonte externa de áudio, converte para MP3 e salva em `data/media`. Para contornar restrições SABR do YouTube, o `yt-dlp` usa `--extractor-args "youtube:player_client=android"` e tenta primeiro **sem cookies**; só usa os cookies configurados se a tentativa anônima falhar.
 4. Quando a faixa fica `ready`, o player toca via `/api/tracks/:id/stream`, com suporte a HTTP `Range`. No APK, o arquivo é servido direto do armazenamento do app, também com `Range` (seek e crossfade).
-5. Logo depois do download, a API mede a loudness da faixa (EBU R128, filtro `loudnorm` do `ffmpeg`), usada na equalização de volume.
+5. Na importação, a API também guarda a lista de faixas do álbum no catálogo. A tela do álbum abre com essa cópia, sem consultar a internet (a cópia é atualizada em segundo plano a cada 7 dias).
+6. Logo depois do download, a API mede a loudness da faixa (EBU R128, filtro `loudnorm` do `ffmpeg`), usada na equalização de volume.
 
 ## ⚖️ Disclaimer / Isenção de Responsabilidade
 
@@ -189,11 +190,13 @@ Este projeto foi desenvolvido estritamente para **fins educacionais e de estudo*
 
 | Método | Rota | Função |
 |---|---|---|
-| GET | `/api/search?q=` | Busca na biblioteca local, playlists locais e no catálogo externo |
+| GET | `/api/search?q=&scope=` | Busca na biblioteca local e no catálogo externo (álbuns, músicas, artistas e playlists). `scope=local` responde na hora, `scope=external` só o catálogo; sem `scope`, os dois |
 | POST | `/api/import/track` | Importa uma faixa do catálogo e enfileira o download |
 | POST | `/api/import/album` | Importa um álbum com todas as faixas |
+| POST | `/api/import/playlist` | Importa uma playlist do catálogo: cria a playlist local e enfileira as faixas |
 | GET | `/api/albums/:id` | Álbum com capa e faixas (status normalizado pela existência do arquivo) |
 | GET | `/api/preview/album?catalogId=` | Pré-visualização de álbum do catálogo externo |
+| GET | `/api/preview/playlist?catalogId=` | Pré-visualização de playlist do catálogo externo |
 | GET | `/api/artists/:id` | Artista com discografia local |
 | GET | `/api/tracks/:id` | Status de uma faixa |
 | GET | `/api/tracks/:id/progress` | Percentual e status do download |
@@ -241,9 +244,12 @@ Este projeto foi desenvolvido estritamente para **fins educacionais e de estudo*
 - **Home/dashboard:** saudação, contagem de álbuns/faixas/playlists, espaço usado em disco e ações rápidas "Tocar tudo" / "Aleatório".
 - **Carrossel de álbuns:** na home os álbuns ficam em um carrossel horizontal arrastável, com setas < > ao lado do título para navegar de 1 a 3 álbuns por clique.
 - **Capas de álbum com play:** botão verde de play em destaque nas capas para tocar o álbum direto da home; muda para pause vermelho quando o álbum está sendo reproduzido.
-- **Busca unificada:** resultados ordenados em Álbuns, Playlists (locais) e Músicas; campo de busca fixo ao rolar; botão de limpar texto dentro do input; artistas clicáveis para nova busca.
+- **Busca unificada:** resultados ordenados em Álbuns, Playlists e Músicas, da biblioteca e do catálogo (até 100 álbuns, 25 músicas e 25 playlists); a biblioteca aparece na hora e o catálogo completa em seguida; campo de busca fixo ao rolar; botão de limpar texto dentro do input; artistas clicáveis para nova busca. No celular o campo só abre o teclado quando tocado.
+- **Filtros da busca:** Tudo / Álbuns / Playlists / Músicas, com a quantidade de resultados de cada um; o filtro escolhido continua ao voltar de um álbum ou playlist.
+- **Playlists do catálogo:** abrem uma pré-visualização como a do álbum, com importação faixa a faixa ou da playlist inteira. Depois de importar, o "voltar" leva direto à busca.
 - **Histórico de buscas:** as últimas 10 buscas ficam salvas e podem ser reexecutadas.
 - **Download com progresso:** telas de álbum e pré-visualização mostram barra de progresso ao importar faixas.
+- **Play nas listas de faixas:** a faixa atual mostra ❚❚ enquanto toca (pausa ao tocar) e ▶ quando pausada (continua de onde parou), com o equalizador animado na linha.
 - **Modal de confirmação:** exclusões de álbuns, faixas e playlists usam um modal customizado.
 - **Playlists:** adicionar, remover, reordenar arrastando pela alça ⋮⋮ (mouse, toque com leve espera e teclado), buscar músicas na biblioteca e receber sugestões por gênero (até 10 faixas).
 - **Layout responsivo:** desktop (> 1024px) respeita a preferência de menu recolhido; tablet (641–1024px) mostra o menu só com ícones; no mobile (≤ 640px) o menu vira uma gaveta aberta pelo botão ☰ (fecha ao tocar fora, ao navegar, com Esc ou com o "voltar" do aparelho), o player ocupa duas linhas e as ações das faixas ficam no menu "⋯".
