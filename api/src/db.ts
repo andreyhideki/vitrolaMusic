@@ -85,6 +85,14 @@ CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
+
+-- Cópia da lista de faixas do catálogo externo de cada álbum (salva na importação). A tela
+-- do álbum usa esta cópia em vez de consultar o catálogo pela rede a cada abertura.
+CREATE TABLE IF NOT EXISTS album_catalog (
+  album_id INTEGER PRIMARY KEY REFERENCES albums(id) ON DELETE CASCADE,
+  tracks_json TEXT NOT NULL,
+  fetched_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 `);
 
 // Migrations de colunas: rodam depois do CREATE TABLE para funcionar também em banco novo.
