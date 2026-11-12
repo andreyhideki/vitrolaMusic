@@ -403,6 +403,18 @@ input, select {
 }
 .clear-input:hover { opacity: 0.8; }
 
+/* Filtros da busca (Tudo / Álbuns / Playlists / Músicas): rolam na horizontal no celular. */
+.search-filters {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  margin-top: 10px;
+  scrollbar-width: none;
+}
+.search-filters::-webkit-scrollbar { display: none; }
+.search-filters button.badge { flex: none; margin-bottom: 0; white-space: nowrap; }
+.chips button.badge.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 600; }
+
 .search-sticky {
   position: sticky;
   top: 0;

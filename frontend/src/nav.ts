@@ -5,6 +5,7 @@ export type View =
   | { kind: 'search' }
   | { kind: 'album'; id: number }
   | { kind: 'albumPreview'; catalogId: string }
+  | { kind: 'playlistPreview'; catalogId: string }
   | { kind: 'artist'; id: number }
   | { kind: 'playlists' }
   | { kind: 'playlist'; id: number }
@@ -16,6 +17,8 @@ interface NavState {
   future: View[];
   states: Map<string, unknown>;
   go: (v: View, state?: unknown) => void;
+  /** Troca a tela atual sem empilhar (o "voltar" pula a tela substituída). */
+  replace: (v: View) => void;
   back: () => boolean;
   forward: () => boolean;
   canGoBack: boolean;
@@ -28,6 +31,7 @@ function viewKey(v: View): string {
   switch (v.kind) {
     case 'album': return `album:${v.id}`;
     case 'albumPreview': return `albumPreview:${v.catalogId}`;
+    case 'playlistPreview': return `playlistPreview:${v.catalogId}`;
     case 'artist': return `artist:${v.id}`;
     case 'playlist': return `playlist:${v.id}`;
     case 'analytics': return 'analytics';
@@ -55,6 +59,14 @@ export const useNav = create<NavState>((set, get) => ({
         canGoBack: true,
         canGoForward: false,
       };
+    });
+  },
+
+  replace: (view) => {
+    set((s) => {
+      const nextStates = new Map(s.states);
+      nextStates.delete(viewKey(s.view));
+      return { view, future: [], states: nextStates, canGoForward: false };
     });
   },
 

@@ -72,7 +72,14 @@ const catalogAlbum = {
   tracks: { data: [{ id: 101, title: 'Faixa #1', duration: 200, track_position: 1, artist: { name: 'Banda' } }] },
 };
 
+const catalogPlaylistTracks = [
+  { id: 201, title: 'Hit', duration: 180, artist: { id: 8, name: 'Outra' }, album: { id: 20, title: 'Outro', cover_medium: 'https://img/o.jpg' } },
+  { id: 201, title: 'Hit', duration: 180, artist: { id: 8, name: 'Outra' }, album: { id: 20, title: 'Outro', cover_medium: 'https://img/o.jpg' } },
+];
+
 let server: typeof import('./index');
+/** Quantas vezes o catálogo externo foi consultado para o álbum 10. */
+let albumCatalogCalls = 0;
 let call: (path: string, init?: { method?: string; body?: unknown }) => Promise<{ status: number; body: any }>;
 
 beforeAll(async () => {
@@ -83,7 +90,18 @@ beforeAll(async () => {
   // fetch externo (catálogo): simulado. /api/*: vai para os routers locais.
   const external = vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input);
-    if (url.includes('/album/10')) return new Response(JSON.stringify(catalogAlbum));
+    if (url.includes('/album/10')) {
+      albumCatalogCalls++;
+      return new Response(JSON.stringify(catalogAlbum));
+    }
+    if (url.includes('/playlist/55/tracks')) {
+      return new Response(JSON.stringify({ data: url.includes('index=0') ? catalogPlaylistTracks : [] }));
+    }
+    if (url.includes('/playlist/55')) return new Response(JSON.stringify({ id: 55, title: 'Rock 80', description: '', creator: { name: 'Editor' } }));
+    if (url.includes('/album/20')) {
+      albumCatalogCalls++;
+      return new Response(JSON.stringify({ ...catalogAlbum, id: 20, title: 'Outro', genres: { data: [{ name: 'Pop' }] }, tracks: { data: [{ id: 201, title: 'Hit', duration: 180, track_position: 4 }] } }));
+    }
     if (url.includes('/search/')) return new Response(JSON.stringify({ data: [] }));
     return new Response('{}', { status: 404 });
   });
@@ -162,6 +180,55 @@ describe('API local do APK', () => {
     expect(await server.resolveStreamUrl(String(track.id), `/api/tracks/${track.id}/stream-url`)).toBe('https://stream.example/audio');
   });
 
+  it('abre o álbum pela cópia do catálogo salva na importação, sem esperar a rede', async () => {
+    const albumId = (await call('/api/library')).body.tracks[0].albumId;
+    const before = albumCatalogCalls;
+    const album = await call(`/api/albums/${albumId}`);
+    expect(album.status).toBe(200);
+    expect(album.body.tracks).toMatchObject([{ title: 'Faixa #1', downloadStatus: 'ready' }]);
+    expect(albumCatalogCalls).toBe(before); // cópia recente: nada de rede
+
+    // Álbum importado antes da cópia existir: responde com as faixas locais e busca em segundo plano.
+    const { db } = await import('../../../api/src/db');
+    db.prepare('DELETE FROM album_catalog WHERE album_id = ?').run(albumId);
+    const legacy = await call(`/api/albums/${albumId}`);
+    expect(legacy.body.tracks).toHaveLength(1);
+    await vi.waitFor(() => expect(db.prepare('SELECT COUNT(*) AS n FROM album_catalog WHERE album_id = ?').get(albumId)).toEqual({ n: 1 }));
+    expect(albumCatalogCalls).toBe(before + 1);
+  });
+
+  it('busca local separada do catálogo (scope)', async () => {
+    const local = await call('/api/search?q=Faixa&scope=local');
+    expect(local.body.local.tracks).toMatchObject([{ title: 'Faixa #1' }]);
+    expect(local.body.external).toEqual({ tracks: [], albums: [], artists: [], playlists: [] });
+    expect(local.body.warning).toBeUndefined();
+
+    const external = await call('/api/search?q=Faixa&scope=external');
+    expect(external.body.local.tracks).toEqual([]);
+    expect(external.body.warning).toBeUndefined();
+  });
+
+  it('importa playlist do catálogo sem duplicar e completa o álbum em segundo plano', async () => {
+    const preview = await call('/api/preview/playlist?catalogId=55');
+    expect(preview.body.album).toMatchObject({ title: 'Rock 80', artistName: 'Editor' });
+    expect(preview.body.tracks).toHaveLength(2);
+
+    const first = await call('/api/import/playlist', { method: 'POST', body: { catalogId: '55' } });
+    expect(first.status).toBe(201);
+    const again = await call('/api/import/playlist', { method: 'POST', body: { catalogId: '55' } });
+    expect(again.body.playlistId).toBe(first.body.playlistId);
+
+    const playlist = await call(`/api/playlists/${first.body.playlistId}`);
+    expect(playlist.body.name).toBe('Rock 80');
+    expect(playlist.body.entries.map((e: any) => e.track.title)).toEqual(['Hit']);
+
+    // Gênero e número da faixa vêm do álbum, buscado depois.
+    await vi.waitFor(async () => {
+      const t = (await call(`/api/playlists/${first.body.playlistId}`)).body.entries[0].track;
+      expect(t).toMatchObject({ genreName: 'Pop', trackNumber: 4 });
+    });
+  });
+
   it('grava o banco no arquivo do app e recarrega', async () => {
     const { flushAll } = await import('./persist');
     await flushAll();
@@ -171,7 +238,7 @@ describe('API local do APK', () => {
     const initSqlJs = (await import('sql.js')).default;
     const SQL = await initSqlJs();
     const copy = new SQL.Database(Uint8Array.from(atob(saved!), (c) => c.charCodeAt(0)));
-    expect(copy.exec('SELECT title FROM tracks')[0].values).toEqual([['Faixa #1']]);
+    expect(copy.exec('SELECT title FROM tracks ORDER BY id')[0].values).toEqual([['Faixa #1'], ['Hit']]);
     expect(copy.exec('SELECT value FROM settings WHERE key = ?', ['crossfadeSeconds'])[0].values).toEqual([['5']]);
   });
 

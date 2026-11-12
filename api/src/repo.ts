@@ -239,7 +239,7 @@ export function listLibraryTracks(genreId?: number): TrackDto[] {
 export function upsertArtist(extId: string, name: string, imageUrl: string | null): number {
   const row = db.prepare(`
     INSERT INTO artists (ext_id, name, image_url) VALUES (?, ?, ?)
-    ON CONFLICT(ext_id) DO UPDATE SET name = excluded.name, image_url = excluded.image_url
+    ON CONFLICT(ext_id) DO UPDATE SET name = excluded.name, image_url = COALESCE(excluded.image_url, image_url)
     RETURNING id`).get(extId, name, imageUrl) as { id: number };
   return row.id;
 }
@@ -255,6 +255,20 @@ export function upsertAlbum(
       genre_id = excluded.genre_id, release_year = excluded.release_year, cover_url = excluded.cover_url
     RETURNING id`).get(extId, a.title, a.artistId, a.genreId ?? null, a.releaseYear, a.coverUrl) as { id: number };
   return row.id;
+}
+
+export function findAlbumIdByExtId(extId: string): number | null {
+  const row = db.prepare('SELECT id FROM albums WHERE ext_id = ?').get(extId) as { id: number } | undefined;
+  return row?.id ?? null;
+}
+
+export function setTrackNumber(extId: string, trackNumber: number): void {
+  db.prepare('UPDATE tracks SET track_number = ? WHERE ext_id = ?').run(trackNumber, extId);
+}
+
+/** Cria o álbum só se ainda não existe (não apaga gênero/ano de um álbum já importado). */
+export function ensureAlbum(extId: string, a: { title: string; artistId: number; coverUrl: string | null }): number {
+  return findAlbumIdByExtId(extId) ?? upsertAlbum(extId, { ...a, genreId: null, releaseYear: null });
 }
 
 export function upsertGenre(name: string): number | null {
@@ -276,7 +290,7 @@ export function upsertTrack(
     VALUES (?, ?, ?, ?, ?, ?)
     ON CONFLICT(ext_id) DO UPDATE SET title = excluded.title, album_id = excluded.album_id,
       artist_id = excluded.artist_id, duration_seconds = excluded.duration_seconds,
-      track_number = excluded.track_number
+      track_number = COALESCE(excluded.track_number, track_number)
     RETURNING id`).get(extId, t.title, t.albumId, t.artistId, t.durationSeconds, t.trackNumber) as { id: number };
   return row.id;
 }
@@ -495,6 +509,23 @@ export function createPlaylist(name: string, description: string | null): number
   const row = db.prepare('INSERT INTO playlists (name, description) VALUES (?, ?) RETURNING id')
     .get(name, description) as { id: number };
   return row.id;
+}
+
+export function findPlaylistByExtId(extId: string): number | null {
+  const row = db.prepare('SELECT id FROM playlists WHERE ext_id = ?').get(extId) as { id: number } | undefined;
+  return row?.id ?? null;
+}
+
+export function createCatalogPlaylist(extId: string, name: string, description: string | null): number {
+  const row = db.prepare('INSERT INTO playlists (name, description, ext_id) VALUES (?, ?, ?) RETURNING id')
+    .get(name, description, extId) as { id: number };
+  return row.id;
+}
+
+/** Faixas que já estão na playlist (para reimportar sem duplicar). */
+export function playlistTrackIds(playlistId: number): Set<number> {
+  const rows = db.prepare('SELECT track_id FROM playlist_entries WHERE playlist_id = ?').all(playlistId) as { track_id: number }[];
+  return new Set(rows.map((r) => r.track_id));
 }
 
 export function updatePlaylist(id: number, fields: { name?: string; description?: string }): void {
