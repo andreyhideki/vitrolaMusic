@@ -23,11 +23,28 @@ public class KeepAliveService extends Service {
 
     static final String EXTRA_PLAYING = "playing";
     static final String EXTRA_DOWNLOADING = "downloading";
+    static final String EXTRA_CURRENT = "downloadCurrent";
+    static final String EXTRA_TOTAL = "downloadTotal";
     private static final String CHANNEL_ID = "vitrola_background";
     private static final int NOTIFICATION_ID = 1;
     private static final long WAKE_LOCK_TIMEOUT_MS = 6L * 60 * 60 * 1000;
 
     private PowerManager.WakeLock wakeLock;
+
+    /** Estado do serviço em execução (null se parado): tocando / baixando. */
+    private static volatile boolean[] runningState;
+
+    /**
+     * Se o serviço já roda com os mesmos tipos (tocando/baixando), só troca o texto da
+     * notificação. Devolve false quando é preciso (re)iniciar ou parar o serviço.
+     */
+    static boolean updateIfRunning(Context ctx, boolean playing, boolean downloading, int current, int total) {
+        boolean[] state = runningState;
+        if (state == null || state[0] != playing || state[1] != downloading) return false;
+        NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+        nm.notify(NOTIFICATION_ID, buildNotification(ctx, playing, downloading, current, total));
+        return true;
+    }
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -38,6 +55,8 @@ public class KeepAliveService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         boolean playing = intent != null && intent.getBooleanExtra(EXTRA_PLAYING, false);
         boolean downloading = intent != null && intent.getBooleanExtra(EXTRA_DOWNLOADING, false);
+        int current = intent != null ? intent.getIntExtra(EXTRA_CURRENT, 0) : 0;
+        int total = intent != null ? intent.getIntExtra(EXTRA_TOTAL, 0) : 0;
 
         if (!playing && !downloading) {
             stop();
@@ -49,7 +68,8 @@ public class KeepAliveService extends Service {
             if (playing) type |= ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK;
             if (downloading) type |= ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC;
         }
-        ServiceCompat.startForeground(this, NOTIFICATION_ID, buildNotification(playing, downloading), type);
+        ServiceCompat.startForeground(this, NOTIFICATION_ID, buildNotification(this, playing, downloading, current, total), type);
+        runningState = new boolean[] { playing, downloading };
         acquireWakeLock();
         return START_NOT_STICKY;
     }
@@ -62,37 +82,43 @@ public class KeepAliveService extends Service {
 
     @Override
     public void onDestroy() {
+        runningState = null;
         releaseWakeLock();
         super.onDestroy();
     }
 
     private void stop() {
+        runningState = null;
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE);
         releaseWakeLock();
         stopSelf();
     }
 
-    private Notification buildNotification(boolean playing, boolean downloading) {
-        NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+    private static Notification buildNotification(Context ctx, boolean playing, boolean downloading, int current, int total) {
+        NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && nm.getNotificationChannel(CHANNEL_ID) == null) {
             NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "Reprodução e downloads", NotificationManager.IMPORTANCE_LOW);
             channel.setShowBadge(false);
             nm.createNotificationChannel(channel);
         }
 
-        Intent open = new Intent(this, MainActivity.class).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        PendingIntent content = PendingIntent.getActivity(this, 0, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        Intent open = new Intent(ctx, MainActivity.class).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        PendingIntent content = PendingIntent.getActivity(ctx, 0, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
 
-        String text = playing ? (downloading ? "Tocando · baixando músicas" : "Tocando") : "Baixando músicas";
-        return new NotificationCompat.Builder(this, CHANNEL_ID)
+        String download = total > 0 ? "Baixando " + current + " de " + total : "Baixando músicas";
+        String text = playing ? (downloading ? "Tocando · " + download.toLowerCase() : "Tocando") : download;
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(ctx, CHANNEL_ID)
             .setSmallIcon(playing ? android.R.drawable.ic_media_play : android.R.drawable.stat_sys_download)
             .setContentTitle("Vitrola Music")
             .setContentText(text)
             .setContentIntent(content)
             .setOngoing(true)
             .setSilent(true)
-            .setCategory(playing ? NotificationCompat.CATEGORY_TRANSPORT : NotificationCompat.CATEGORY_PROGRESS)
-            .build();
+            .setOnlyAlertOnce(true)
+            .setCategory(playing ? NotificationCompat.CATEGORY_TRANSPORT : NotificationCompat.CATEGORY_PROGRESS);
+        // Barra de progresso da leva: faixas concluídas de total.
+        if (downloading && total > 0) builder.setProgress(total, current - 1, false);
+        return builder.build();
     }
 
     private void acquireWakeLock() {

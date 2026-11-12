@@ -274,10 +274,20 @@ public class VitrolaPlugin extends Plugin {
     public void setKeepAlive(PluginCall call) {
         boolean playing = Boolean.TRUE.equals(call.getBoolean("playing", false));
         boolean downloading = Boolean.TRUE.equals(call.getBoolean("downloading", false));
+        int current = call.getInt("downloadCurrent", 0);
+        int total = call.getInt("downloadTotal", 0);
         Context ctx = getContext();
+        // Só o contador mudou: atualiza a notificação sem reiniciar o serviço (o Android 12+
+        // pode recusar startForegroundService com o app em segundo plano).
+        if (KeepAliveService.updateIfRunning(ctx, playing, downloading, current, total)) {
+            call.resolve();
+            return;
+        }
         Intent intent = new Intent(ctx, KeepAliveService.class)
             .putExtra(KeepAliveService.EXTRA_PLAYING, playing)
-            .putExtra(KeepAliveService.EXTRA_DOWNLOADING, downloading);
+            .putExtra(KeepAliveService.EXTRA_DOWNLOADING, downloading)
+            .putExtra(KeepAliveService.EXTRA_CURRENT, current)
+            .putExtra(KeepAliveService.EXTRA_TOTAL, total);
         try {
             if (playing || downloading) {
                 ContextCompat.startForegroundService(ctx, intent);
