@@ -88,6 +88,14 @@ export interface ExternalTrack {
   durationSeconds: number | null;
 }
 
+export interface ExternalPlaylist {
+  catalogId: string;
+  title: string;
+  ownerName: string;
+  coverUrl: string | null;
+  trackCount: number;
+}
+
 export interface ExternalAlbum {
   catalogId: string;
   title: string;
@@ -100,6 +108,8 @@ export interface SearchResponse {
   external: {
     tracks: ExternalTrack[];
     albums: ExternalAlbum[];
+    /** Playlists do catálogo (versões antigas da API não mandam). */
+    playlists?: ExternalPlaylist[];
     artists: { catalogId: string; name: string; imageUrl: string | null }[];
   };
   warning?: string;

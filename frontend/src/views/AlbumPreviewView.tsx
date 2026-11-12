@@ -13,7 +13,9 @@ interface ProgressInfo {
   status: TrackDto['downloadStatus'];
 }
 
-export function AlbumPreviewView({ catalogId }: { catalogId: string }) {
+/** Prévia de um álbum ou de uma playlist do catálogo externo, com importação. */
+export function AlbumPreviewView({ catalogId, type = 'album' }: { catalogId: string; type?: 'album' | 'playlist' }) {
+  const isPlaylist = type === 'playlist';
   const currentTrackId = usePlayerStore((s) => s.currentTrackId);
   const playing = usePlayback((s) => s.playing);
   const [data, setData] = useState<AlbumPreviewResponse | null>(null);
@@ -21,14 +23,14 @@ export function AlbumPreviewView({ catalogId }: { catalogId: string }) {
   const [importingAlbum, setImportingAlbum] = useState(false);
   const [importedTrackIds, setImportedTrackIds] = useState<Set<number>>(new Set());
   const [progressMap, setProgressMap] = useState<Record<number, ProgressInfo>>({});
-  const go = useNav((s) => s.go);
+  const replace = useNav((s) => s.replace);
   const pollingRef = useRef<Set<number>>(new Set());
   const startedRef = useRef<Set<number>>(new Set());
   const mountedRef = useRef(true);
 
   async function load() {
     try {
-      const d = await api<AlbumPreviewResponse>(`/preview/album?catalogId=${catalogId}`);
+      const d = await api<AlbumPreviewResponse>(`/preview/${type}?catalogId=${catalogId}`);
       useLibrary.getState().upsert(d.tracks.filter((t) => t.localTrackId !== null));
       setData(d);
       setError('');
@@ -51,7 +53,7 @@ export function AlbumPreviewView({ catalogId }: { catalogId: string }) {
       startedRef.current.clear();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [catalogId]);
+  }, [catalogId, type]);
 
   useEffect(() => {
     if (!data) return;
@@ -105,8 +107,14 @@ export function AlbumPreviewView({ catalogId }: { catalogId: string }) {
     if (!data || importingAlbum) return;
     setImportingAlbum(true);
     try {
+      if (isPlaylist) {
+        const { playlistId } = await send<{ playlistId: number }>('POST', '/import/playlist', { catalogId: data.catalogId });
+        // Substitui a prévia: o "voltar" da playlist importada leva de volta à busca.
+        replace({ kind: 'playlist', id: playlistId });
+        return;
+      }
       const { albumId } = await send<{ albumId: number }>('POST', '/import/album', { catalogId: data.catalogId });
-      go({ kind: 'album', id: albumId });
+      replace({ kind: 'album', id: albumId });
     } catch (e) {
       setError(errorMessage(e));
       setImportingAlbum(false);
@@ -149,9 +157,10 @@ export function AlbumPreviewView({ catalogId }: { catalogId: string }) {
       <div className="header">
         {album.coverUrl && <img src={album.coverUrl} alt={`Capa de ${album.title}`} />}
         <div>
-          <div className="muted">Pré-visualização do álbum</div>
+          <div className="muted">{isPlaylist ? 'Pré-visualização da playlist' : 'Pré-visualização do álbum'}</div>
           <h1>{album.title}</h1>
           <div>
+            {isPlaylist && album.artistName ? 'por ' : ''}
             {album.artistName}
             {album.releaseYear ? ` · ${album.releaseYear}` : ''} · {tracks.length} faixas
           </div>
@@ -159,7 +168,7 @@ export function AlbumPreviewView({ catalogId }: { catalogId: string }) {
       </div>
       <div className="actions">
         <button className="primary" onClick={importAlbum} disabled={importingAlbum}>
-          {importingAlbum ? 'Importando…' : 'Importar álbum'}
+          {importingAlbum ? 'Importando…' : isPlaylist ? 'Importar playlist' : 'Importar álbum'}
         </button>
       </div>
 
@@ -181,7 +190,7 @@ export function AlbumPreviewView({ catalogId }: { catalogId: string }) {
               </span>
               <div className="info">
                 <div className="title">{t.title}</div>
-                <div className="muted">{t.artistName}</div>
+                <div className="muted">{isPlaylist && t.albumTitle ? `${t.artistName} · ${t.albumTitle}` : t.artistName}</div>
                 {showProgress && (
                   <div className="track-progress">
                     <div className="track-progress-bar">

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as repo from '../repo.js';
-import { importAlbum, importTrack } from '../services/importer.js';
+import { importAlbum, importPlaylist, importTrack } from '../services/importer.js';
 import { HttpError } from '../http.js';
 
 export const importRouter = Router();
@@ -21,4 +21,9 @@ importRouter.post('/track', async (req, res) => {
 importRouter.post('/album', async (req, res) => {
   const albumId = await importAlbum(catalogId(req.body?.catalogId));
   res.status(201).json({ albumId });
+});
+
+importRouter.post('/playlist', async (req, res) => {
+  const playlistId = await importPlaylist(catalogId(req.body?.catalogId));
+  res.status(201).json({ playlistId });
 });

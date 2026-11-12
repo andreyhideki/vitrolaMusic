@@ -113,6 +113,12 @@ if (!hasColumn('tracks', 'loudness_lufs')) {
   db.exec(`ALTER TABLE tracks ADD COLUMN loudness_lufs REAL`);
 }
 
+// Playlist importada do catálogo externo (catalog:playlist:<id>): reimportar atualiza a mesma.
+if (!hasColumn('playlists', 'ext_id')) {
+  db.exec(`ALTER TABLE playlists ADD COLUMN ext_id TEXT`);
+}
+db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_playlists_ext_id ON playlists(ext_id) WHERE ext_id IS NOT NULL`);
+
 // Migra prefixos de catálogo usados por versões anteriores.
 const LEGACY_CATALOG_PREFIX = 'deezer:';
 for (const table of ['artists', 'albums', 'tracks']) {

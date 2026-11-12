@@ -34,6 +34,8 @@ function Main({ view }: { view: View }) {
       return <AlbumView id={view.id} />;
     case 'albumPreview':
       return <AlbumPreviewView catalogId={view.catalogId} />;
+    case 'playlistPreview':
+      return <AlbumPreviewView key={`p${view.catalogId}`} catalogId={view.catalogId} type="playlist" />;
     case 'playlists':
       return <PlaylistsView />;
     case 'playlist':
