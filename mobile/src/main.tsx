@@ -13,6 +13,7 @@ import { startKeepAlive } from './keepAlive';
 import { flushAll } from './server/persist';
 import { platform } from '../../frontend/src/platform';
 import { androidAudioOutput } from './audioOutput';
+import { detectMediaRangeMode } from './shims/paths';
 
 const root = createRoot(document.getElementById('root')!);
 
@@ -22,6 +23,8 @@ async function start(): Promise<void> {
   const server = await import('./server');
   server.installLocalFetch();
   platform.resolveStreamUrl = server.resolveStreamUrl;
+  // Antes de tocar qualquer faixa: define como o servidor nativo responde ao Range (seek).
+  await detectMediaRangeMode();
   platform.audioOutput = androidAudioOutput;
 
   // Grava o banco antes de o Android poder encerrar o app.

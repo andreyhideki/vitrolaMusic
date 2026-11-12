@@ -21,14 +21,16 @@ import java.util.regex.Pattern;
 /**
  * Serve os arquivos de áudio baixados em {@code https://localhost/_vitrola_media_/<caminho absoluto>}.
  *
- * O servidor local do Capacitor ({@code _capacitor_file_}) responde 206 a requisições com Range, mas
- * devolve o arquivo desde o início, o que quebra o seek. Aqui o Range é respeitado (mesma lógica da
- * rota {@code GET /api/tracks/:id/stream} da API). Só arquivos de áudio dentro da pasta de dados do
- * app são servidos.
+ * Respeita o Range (seek e crossfade) nos dois comportamentos do WebView: os recentes (ex.: Chromium
+ * 157) aplicam sozinhos o início do Range sobre a resposta interceptada; os antigos não. O JS descobre
+ * qual é o caso uma vez, pelo {@link #probe}, e avisa com {@code ?wv=1} na URL. Só arquivos de áudio
+ * dentro da pasta de dados do app são servidos.
  */
 public class MediaWebViewClient extends BridgeWebViewClient {
 
     public static final String PREFIX = "/_vitrola_media_";
+    /** Pedido de teste: o JS descobre se o WebView aplica o Range sozinho (ver {@link #probe}). */
+    private static final String PROBE = PREFIX + "/__probe__";
     private static final Pattern RANGE = Pattern.compile("^bytes=(\\d*)-(\\d*)$");
     private static final Map<String, String> MIME = new HashMap<>();
 
@@ -54,12 +56,35 @@ public class MediaWebViewClient extends BridgeWebViewClient {
         Uri url = request.getUrl();
         String path = url.getPath();
         if ("localhost".equals(url.getHost()) && path != null && path.startsWith(PREFIX + "/")) {
-            return serve(path.substring(PREFIX.length()), request.getRequestHeaders());
+            if (path.equals(PROBE)) return probe();
+            boolean webViewSlices = "1".equals(url.getQueryParameter("wv"));
+            return serve(path.substring(PREFIX.length()), request.getRequestHeaders(), webViewSlices);
         }
         return super.shouldInterceptRequest(view, request);
     }
 
-    private WebResourceResponse serve(String filePath, Map<String, String> requestHeaders) {
+    /**
+     * Resposta de teste: 256 bytes (0, 1, 2...) inteiros, como 206. O JS pede {@code bytes=10-19}: se o
+     * primeiro byte recebido for 10, o WebView recortou o início sozinho (WebViews recentes fazem isso
+     * com respostas interceptadas); se for 0, não recorta e o recorte fica por conta de {@link #serve}.
+     */
+    private static WebResourceResponse probe() {
+        byte[] data = new byte[256];
+        for (int i = 0; i < data.length; i++) data[i] = (byte) i;
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Accept-Ranges", "bytes");
+        headers.put("Cache-Control", "no-store");
+        headers.put("Content-Range", "bytes 10-19/256");
+        return new WebResourceResponse("application/octet-stream", null, 206, "Partial Content", headers, new ByteArrayInputStream(data));
+    }
+
+    /**
+     * @param webViewSlices o WebView aplica o início do Range sozinho (detectado pelo {@link #probe}).
+     *     Nesse caso o stream vai desde o byte 0 (limitado ao fim do intervalo) e o WebView pula até o
+     *     início; recortar aqui também faria o início ser pulado duas vezes (seek tocava o trecho errado
+     *     e, perto do fim da faixa, a resposta ficava vazia e o player travava ou pulava de música).
+     */
+    private WebResourceResponse serve(String filePath, Map<String, String> requestHeaders, boolean webViewSlices) {
         File file;
         try {
             file = new File(filePath).getCanonicalFile();
@@ -103,6 +128,14 @@ public class MediaWebViewClient extends BridgeWebViewClient {
             }
             if (start >= size || start > end) return unsatisfiable(size);
 
+            long length = end - start + 1;
+            headers.put("Content-Range", "bytes " + start + "-" + end + "/" + size);
+            if (webViewSlices) {
+                // O WebView calcula o Content-Length (stream disponível - início) e pula até o início.
+                InputStream whole = new LimitedInputStream(new FileInputStream(file), end + 1);
+                return new WebResourceResponse(mime, null, 206, "Partial Content", headers, whole);
+            }
+
             InputStream in = new FileInputStream(file);
             long skipped = 0;
             while (skipped < start) {
@@ -110,8 +143,6 @@ public class MediaWebViewClient extends BridgeWebViewClient {
                 if (n <= 0) break;
                 skipped += n;
             }
-            long length = end - start + 1;
-            headers.put("Content-Range", "bytes " + start + "-" + end + "/" + size);
             headers.put("Content-Length", String.valueOf(length));
             return new WebResourceResponse(mime, null, 206, "Partial Content", headers, new LimitedInputStream(in, length));
         } catch (IOException | NumberFormatException e) {
@@ -154,6 +185,14 @@ public class MediaWebViewClient extends BridgeWebViewClient {
             int n = super.read(buf, off, (int) Math.min(len, remaining));
             if (n > 0) remaining -= n;
             return n;
+        }
+
+        // O WebView pula até o início do Range com skip(): o que foi pulado conta no limite.
+        @Override
+        public long skip(long n) throws IOException {
+            long skipped = super.skip(Math.min(n, remaining));
+            if (skipped > 0) remaining -= skipped;
+            return skipped;
         }
 
         @Override
