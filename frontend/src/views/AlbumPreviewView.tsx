@@ -4,6 +4,9 @@ import { useLibrary } from '../library';
 import { useNav } from '../nav';
 import { playerControls } from '../player/usePlayerAudio';
 import { fmtBitrate, fmtDuration, STATUS_LABEL } from '../format';
+import { usePlayerStore } from '../player/store';
+import { usePlayback } from '../player/playback';
+import { PlayingIcon, TrackPlayButton } from '../components/TrackPlayButton';
 
 interface ProgressInfo {
   percent: number;
@@ -11,6 +14,8 @@ interface ProgressInfo {
 }
 
 export function AlbumPreviewView({ catalogId }: { catalogId: string }) {
+  const currentTrackId = usePlayerStore((s) => s.currentTrackId);
+  const playing = usePlayback((s) => s.playing);
   const [data, setData] = useState<AlbumPreviewResponse | null>(null);
   const [error, setError] = useState('');
   const [importingAlbum, setImportingAlbum] = useState(false);
@@ -131,7 +136,7 @@ export function AlbumPreviewView({ catalogId }: { catalogId: string }) {
 
   function playTrack(trackId: number, index: number) {
     const ids = data?.tracks.map((t) => String(t.localTrackId ?? 0)).filter((id) => id !== '0') ?? [];
-    playerControls.playFrom(ids, index);
+    playerControls.playFrom(ids, Math.max(0, ids.indexOf(String(trackId))));
   }
 
   if (error) return <p className="error">{error}</p>;
@@ -169,18 +174,13 @@ export function AlbumPreviewView({ catalogId }: { catalogId: string }) {
           const imported = localId !== null && importedTrackIds.has(localId);
 
           return (
-            <li key={t.catalogId} className={`track ${ready ? '' : 'unavailable'}`}>
-              <button
-                className="play-btn"
-                disabled={!ready}
-                onClick={() => ready && localId && playTrack(localId, i)}
-                aria-label={`Tocar ${t.title}`}
-              >
-                {ready ? '▶' : '·'}
-              </button>
-              <span className="num muted">{t.trackNumber ?? i + 1}</span>
+            <li key={t.catalogId} className={`track ${ready ? '' : 'unavailable'} ${localId !== null && String(localId) === currentTrackId ? 'playing' : ''}`}>
+              <TrackPlayButton trackId={localId} title={t.title} ready={ready} onPlay={() => localId && playTrack(localId, i)} />
+              <span className="num muted">
+                {localId !== null && String(localId) === currentTrackId && playing ? <PlayingIcon /> : (t.trackNumber ?? i + 1)}
+              </span>
               <div className="info">
-                <div>{t.title}</div>
+                <div className="title">{t.title}</div>
                 <div className="muted">{t.artistName}</div>
                 {showProgress && (
                   <div className="track-progress">

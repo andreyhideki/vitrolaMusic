@@ -5,22 +5,12 @@ import { fmtBitrate, fmtDuration, STATUS_LABEL } from '../format';
 import { playerControls } from '../player/usePlayerAudio';
 import { usePlayerStore } from '../player/store';
 import { usePlayback } from '../player/playback';
+import { PlayingIcon, TrackPlayButton } from './TrackPlayButton';
 
 interface Props {
   tracks: TrackDto[];
   showAlbum?: boolean;
   onDelete?: (trackId: number) => void;
-}
-
-/** Ícone animado de equalizador para a faixa que está tocando. */
-function PlayingIcon() {
-  return (
-    <span className="playing-icon" aria-label="Tocando">
-      <span />
-      <span />
-      <span />
-    </span>
-  );
 }
 
 export function TrackList({ tracks, showAlbum = false, onDelete }: Props) {
@@ -75,14 +65,7 @@ export function TrackList({ tracks, showAlbum = false, onDelete }: Props) {
                 openRow === i ? 'actions-open' : ''
               }`}
             >
-              <button
-                className="play-btn"
-                disabled={!ready}
-                onClick={() => playerControls.playFrom(ids, i)}
-                aria-label={`Tocar ${t.title}`}
-              >
-                {ready ? '▶' : '·'}
-              </button>
+              <TrackPlayButton trackId={t.id} title={t.title} ready={ready} onPlay={() => playerControls.playFrom(ids, i)} />
               <span className="num muted">
                 {isCurrent && playing ? <PlayingIcon /> : (t.trackNumber ?? i + 1)}
               </span>
