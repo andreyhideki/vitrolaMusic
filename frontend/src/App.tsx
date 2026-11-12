@@ -13,6 +13,8 @@ import { LoginView } from './views/LoginView';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { PlayerBar } from './components/PlayerBar';
+import { CarPlayer } from './components/CarPlayer';
+import { startCarDetection } from './carMode';
 import { PwaReloadPrompt } from './components/PwaReloadPrompt';
 import { NoticeContainer } from './components/NoticeContainer';
 import { LibraryView } from './views/LibraryView';
@@ -137,6 +139,9 @@ function AuthenticatedApp() {
     useUi.getState().setScreen(screen);
   }, [screen]);
 
+  // APK: abre o player do carro quando o Bluetooth do carro conecta.
+  useEffect(() => startCarDetection(), []);
+
   // No mobile, fecha a gaveta ao navegar.
   useEffect(() => {
     closeDrawer();
@@ -161,6 +166,7 @@ function AuthenticatedApp() {
         </main>
       </div>
       <PlayerBar />
+      <CarPlayer />
       <PwaReloadPrompt />
       <NoticeContainer />
     </div>

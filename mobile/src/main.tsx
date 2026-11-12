@@ -13,6 +13,7 @@ import { startKeepAlive } from './keepAlive';
 import { flushAll } from './server/persist';
 import { platform } from '../../frontend/src/platform';
 import { androidAudioOutput } from './audioOutput';
+import { androidCar, startMediaSession } from './mediaSession';
 import { detectMediaRangeMode } from './shims/paths';
 
 const root = createRoot(document.getElementById('root')!);
@@ -26,6 +27,7 @@ async function start(): Promise<void> {
   // Antes de tocar qualquer faixa: define como o servidor nativo responde ao Range (seek).
   await detectMediaRangeMode();
   platform.audioOutput = androidAudioOutput;
+  platform.car = androidCar;
 
   // Grava o banco antes de o Android poder encerrar o app.
   void CapApp.addListener('pause', () => void flushAll());
@@ -35,6 +37,7 @@ async function start(): Promise<void> {
 
   server.startBackgroundTasks();
   startKeepAlive(server.pendingDownloads);
+  startMediaSession();
 }
 
 start().catch((err) => {

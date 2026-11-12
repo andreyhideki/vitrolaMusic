@@ -16,6 +16,7 @@ public class MainActivity extends BridgeActivity {
         // Plugins locais precisam ser registrados antes do super.onCreate (que cria o bridge).
         registerPlugin(VitrolaPlugin.class);
         registerPlugin(AudioOutputPlugin.class);
+        registerPlugin(MediaPlugin.class);
         super.onCreate(savedInstanceState);
 
         // Serve as músicas baixadas com suporte real a Range (seek e crossfade).
