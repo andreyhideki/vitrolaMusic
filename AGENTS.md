@@ -129,6 +129,7 @@
 ## Regras
 
 - **Antes de implementar, procure por arquivos, hooks ou componentes com nome parecido** para não refazer o que já existe. Use `grep` ou `glob` para encontrar rotas, stores, hooks, views ou serviços relacionados.
+- **Segurança das dependências:** antes de concluir uma tarefa que mexa em dependências, e periodicamente, rode `make audit` (`npm audit` + `npm outdated` em `api/`, `frontend/` e `mobile/`). Não adicione nem mantenha pacote com CVE ou bug grave reportado pela comunidade: atualize para a versão corrigida (conferindo o changelog e as breaking changes) e confira no GitHub Advisories/issues do projeto se a versão escolhida não tem problema conhecido. Prefira versões estáveis com manutenção ativa a pacotes abandonados. Se não houver correção (ex.: os itens de `workbox-build` citados abaixo), registre aqui o motivo e o risco. Vale também para o `yt-dlp` fixado em `api/Dockerfile` e para as dependências Gradle do `mobile/android`. Depois de atualizar, rode `make reset` / `make mobile-install`, `make typecheck`, `make test` e `make mobile-test`.
 - Sempre que alterar dependências, rode `make reset` para recriar os volumes de `node_modules`.
 - Valide alterações de tipo com `make typecheck` antes de considerar a tarefa pronta.
 - Não confie cegamente em `download_status = 'ready'`: verifique a existência do arquivo no disco quando o status afetar a UI.

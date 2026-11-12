@@ -4,7 +4,7 @@
 COMPOSE ?= docker compose
 
 .DEFAULT_GOAL := help
-.PHONY: help check-docker fix-perms token up down restart logs ps build shell-api shell-web test typecheck reset local-install clean
+.PHONY: help check-docker fix-perms token up down restart logs ps build shell-api shell-web test typecheck audit reset local-install clean
 
 help: ## Mostra os comandos disponíveis
 	@echo "Vitrola Music - comandos:"
@@ -62,6 +62,11 @@ test: check-docker ## Roda os testes da fila do player
 typecheck: check-docker ## Verifica os tipos da API e do frontend
 	$(COMPOSE) run --rm --no-deps api npm run typecheck
 	$(COMPOSE) run --rm --no-deps web npm run typecheck
+
+audit: check-docker ## Verifica vulnerabilidades (npm audit) e pacotes desatualizados (npm outdated) em api/, frontend/ e mobile/
+	-$(COMPOSE) run --rm --no-deps api sh -c 'npm audit; npm outdated'
+	-$(COMPOSE) run --rm --no-deps web sh -c 'npm audit; npm outdated'
+	-cd mobile && { npm audit; npm outdated; }
 
 reset: check-docker ## Recria os containers e os volumes de node_modules (use após mudar dependências)
 	$(COMPOSE) down -v
