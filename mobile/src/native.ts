@@ -42,3 +42,27 @@ export interface AudioOutputPlugin {
 }
 
 export const AudioOutput = registerPlugin<AudioOutputPlugin>('AudioOutput');
+
+/** Sessão de mídia nativa e integração com o carro (`MediaPlugin.java`). */
+export interface MediaPlugin {
+  /** Estado do player para o carro (Bluetooth), a notificação e a tela de bloqueio. */
+  update(options: {
+    hasTrack: boolean;
+    playing: boolean;
+    title: string;
+    artist: string;
+    album: string;
+    artworkUrl?: string;
+    durationMs: number;
+    positionMs: number;
+  }): Promise<void>;
+  getCarState(): Promise<{ connected: boolean; name: string; permission: boolean }>;
+  requestCarPermission(): Promise<{ connected: boolean; name: string; permission: boolean }>;
+  /** Botões do carro, do fone ou da notificação. */
+  addListener(event: 'action', fn: (e: { action: 'play' | 'pause' | 'next' | 'previous' | 'seekTo'; positionMs: number }) => void): Promise<PluginListenerHandle>;
+  /** O áudio ia sair pelo alto-falante: Bluetooth do carro desligou ou o fone saiu. */
+  addListener(event: 'noisy', fn: () => void): Promise<PluginListenerHandle>;
+  addListener(event: 'carChanged', fn: (e: { connected: boolean; name: string; permission: boolean }) => void): Promise<PluginListenerHandle>;
+}
+
+export const Media = registerPlugin<MediaPlugin>('Media');

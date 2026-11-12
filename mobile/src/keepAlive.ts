@@ -5,9 +5,15 @@
  */
 import { Capacitor } from '@capacitor/core';
 import { usePlayback } from '../../frontend/src/player/playback';
+import { usePlayerStore } from '../../frontend/src/player/store';
 import { Vitrola } from './native';
 
 const CHECK_MS = 3000;
+/**
+ * Depois de pausar, mantém o serviço (e a notificação de player) por este tempo: os botões
+ * do carro e da notificação continuam funcionando para retomar. Depois, libera o aparelho.
+ */
+const PAUSED_GRACE_MS = 10 * 60 * 1000;
 
 /**
  * Conta uma "leva" de downloads: começa quando a fila sai do zero, cresce se entram
@@ -34,10 +40,21 @@ export function startKeepAlive(pendingDownloads: () => number): void {
 
   const batch = new DownloadBatch();
   let last = '';
+  let pausedAt = 0;
+  const mediaActive = () => {
+    if (usePlayback.getState().playing) {
+      pausedAt = 0;
+      return true;
+    }
+    if (!usePlayerStore.getState().currentTrackId) return false;
+    if (!pausedAt) pausedAt = Date.now();
+    return Date.now() - pausedAt < PAUSED_GRACE_MS;
+  };
   const update = () => {
     const { current, total } = batch.update(pendingDownloads());
     const state = {
-      playing: usePlayback.getState().playing,
+      // "playing" para o serviço = sessão de música ativa (tocando ou pausada há pouco).
+      playing: mediaActive(),
       downloading: total > 0,
       downloadCurrent: current,
       downloadTotal: total,

@@ -4,6 +4,8 @@ import { api, AppSettings, errorMessage, send } from '../api';
 import { useAuth } from '../auth';
 import { playerControls } from '../player/usePlayerAudio';
 import { useNotice } from '../notice';
+import { useCarMode } from '../carMode';
+import { platform } from '../platform';
 
 interface Props {
   open: boolean;
@@ -22,6 +24,9 @@ const CLEANUP_OPTIONS: { value: number; label: string }[] = [
 ];
 
 export function SettingsModal({ open, onClose }: Props) {
+  const carAuto = useCarMode((s) => s.auto);
+  const setCarAuto = useCarMode((s) => s.setAuto);
+  const carPermission = useCarMode((s) => s.permission);
   const authDisabled = useAuth((s) => s.disabled);
   const [settings, setSettings] = useState<AppSettings>({
     audioQuality: 'medium',
@@ -179,6 +184,21 @@ export function SettingsModal({ open, onClose }: Props) {
               parecido. Músicas muito altas ficam mais baixas, então talvez seja preciso subir o volume geral.
             </p>
           </div>
+
+          {platform.car && (
+            <div className="form-group">
+              <label className="toggle">
+                <input type="checkbox" checked={carAuto} onChange={(e) => void setCarAuto(e.target.checked)} />
+                <span>Abrir o player do carro ao conectar no Bluetooth do carro</span>
+              </label>
+              <p className="hint">
+                Mostra a capa em tela cheia e botões grandes quando o celular conecta no som do carro, e volta ao
+                normal quando desconecta. O Android pede a permissão "Dispositivos próximos" para reconhecer o carro.
+                {carAuto && !carPermission && ' Permissão ainda não concedida: libere em Informações do app → Permissões.'}
+                {' '}O botão 🚗 do player abre o modo carro a qualquer momento.
+              </p>
+            </div>
+          )}
 
           <div className="form-group">
             <label>Limpar faixas não tocadas após</label>

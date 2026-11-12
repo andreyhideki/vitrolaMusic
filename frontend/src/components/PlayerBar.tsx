@@ -6,6 +6,9 @@ import { useLibrary } from '../library';
 import { useNav } from '../nav';
 import { fmtBitrate, fmtTime } from '../format';
 import { AudioOutputButton } from './AudioOutputButton';
+import { useCarMode } from '../carMode';
+import { useUi } from '../ui';
+import { platform } from '../platform';
 
 export function PlayerBar() {
   const currentId = usePlayerStore((s) => s.currentTrackId);
@@ -18,6 +21,9 @@ export function PlayerBar() {
   const lastVolume = useRef(1);
   const source = usePlayerStore((s) => s.source);
   const go = useNav((s) => s.go);
+  const showCar = useCarMode((s) => s.show);
+  // Player do carro: no APK e em telas de celular/tablet (no desktop não faz sentido).
+  const carAvailable = useUi((s) => s.screen !== 'desktop') || !!platform.car;
 
   // Vai para a origem do que está tocando (playlist/álbum/lista); sem origem, abre o álbum da faixa.
   const target = source ?? (track ? { kind: 'album' as const, id: track.albumId } : null);
@@ -110,6 +116,11 @@ export function PlayerBar() {
 
       <div className="volume">
         <AudioOutputButton />
+        {carAvailable && (
+          <button className="icon car-open" onClick={showCar} title="Modo carro" aria-label="Abrir o player do carro">
+            🚗
+          </button>
+        )}
         <button
           className="icon"
           onClick={() => {
