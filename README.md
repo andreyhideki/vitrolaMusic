@@ -4,8 +4,8 @@ Player de áudio web com busca por música, artista ou álbum, capas e metadados
 
 ```
 vitrolaMusic/
-├── api/        # Express 5 + SQLite (busca, metadados, playlists, streaming com Range)
-├── frontend/   # React + Vite + TypeScript + Zustand (player, fila, interface)
+├── api/        # Express 5 + SQLite (better-sqlite3) + TypeScript (busca, metadados, playlists, streaming com Range)
+├── frontend/   # React 19 + Vite 8 + TypeScript 7 + Zustand (player, fila, interface)
 └── mobile/     # APK Android (Capacitor): reaproveita frontend/src e api/src no celular
 ```
 
@@ -48,19 +48,25 @@ Principais comandos (`make help` lista todos):
 | Comando | Função |
 |---|---|
 | `make up` | Sobe os containers (com build) |
-| `make down` | Para os containers |
+| `make down` / `make restart` | Para / reinicia os containers |
+| `make build` | Reconstrói as imagens |
+| `make token` | Mostra o token de acesso |
 | `make logs` | Acompanha os logs |
 | `make ps` | Estado dos containers |
 | `make test` | Roda os testes da fila do player |
 | `make typecheck` | Verifica tipos da API e do frontend |
+| `make audit` | `npm audit` + `npm outdated` em `api/`, `frontend/` e `mobile/` (vulnerabilidades e pacotes desatualizados) |
 | `make shell-api` / `make shell-web` | Abre um shell em cada container |
 | `make reset` | Recria os volumes de `node_modules` (após mudar dependências) |
 | `make clean` | Remove containers, volumes e imagens do projeto (não apaga `./data`) |
 | `make apk` / `make apk-install` | Gera o APK Android / instala no celular via USB (ver [App Android](#app-android-apk-sem-pc)) |
+| `make mobile-install` / `make mobile-test` / `make mobile-typecheck` | Dependências, testes e tipos do `mobile/` |
+
+Os containers usam `node:24-bookworm`. Depois de mudar dependências, rode `make reset` (e `make mobile-install` para o APK).
 
 ### Sem Docker
 
-Requisitos: Node.js 20+, uma ferramenta de download de mídia e ffmpeg no PATH.
+Requisitos: Node.js 24 (mesma versão dos containers), uma ferramenta de download de mídia e ffmpeg no PATH.
 
 ```bash
 # Exemplo no Ubuntu/Debian:
@@ -239,6 +245,7 @@ Este projeto foi desenvolvido estritamente para **fins educacionais e de estudo*
 - Player fixo na parte inferior, sempre visível mesmo com scroll longo.
 - Clicar na faixa atual do player abre a origem do que está tocando (playlist, álbum, busca etc.); sem origem registrada, abre o álbum da faixa.
 - Fila e configurações salvas em `localStorage`, para restaurar após recarregar a página.
+- **Modo carro:** o botão 🚗 do player (celular, tablet e APK) abre um player em tela cheia com capa, título grande e botões grandes (aleatório, voltar, tocar, avançar, repetir), fundo na cor da capa e tela sempre acesa. No APK ele também abre sozinho quando o Bluetooth do carro conecta.
 
 ## Funcionalidades da interface
 
@@ -261,6 +268,12 @@ Este projeto foi desenvolvido estritamente para **fins educacionais e de estudo*
 - **Limpeza automática:** opção de remover faixas baixadas e não tocadas após 180 dias.
 - **PWA:** manifest, ícones e Service Worker para instalação.
 - **App Android:** a mesma interface num APK que funciona sem PC (ver [App Android](#app-android-apk-sem-pc)).
+
+## Dependências e segurança
+
+- Rode `make audit` periodicamente e antes de concluir mudanças em dependências. Pacotes com CVE ou bug grave são atualizados para a versão corrigida.
+- `overrides` do npm só são usados para dependências indiretas sem correção no pacote pai. Hoje há um: `workbox-build` › `glob` `^14.0.5` no `frontend/` (GHSA-3g3m-2fjr-6pw4), a ser removido quando o `workbox-build` aceitar `glob` ≥ 14.0.2.
+- O `npm audit` do frontend ainda aponta itens **baixos** do `deepmerge` (sem versão corrigida), usado só no build do Service Worker; não vai para o bundle.
 
 ## Próximos passos sugeridos
 
