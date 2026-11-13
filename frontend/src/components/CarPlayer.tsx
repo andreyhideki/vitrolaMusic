@@ -6,6 +6,7 @@ import { useLibrary } from '../library';
 import { useCarMode } from '../carMode';
 import { fmtTime } from '../format';
 import { AudioOutputButton } from './AudioOutputButton';
+import { useBackHandler } from '../backButton';
 
 /**
  * Player de tela cheia para usar no carro: capa grande e botões grandes (voltar,
@@ -47,6 +48,8 @@ export function CarPlayer() {
       void lock?.release();
     };
   }, [open]);
+
+  useBackHandler(open, close);
 
   useEffect(() => {
     if (!open) return;

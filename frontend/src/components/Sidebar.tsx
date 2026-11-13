@@ -4,6 +4,7 @@ import { useSidebarCollapsed, useUi } from '../ui';
 import { BUY_ME_A_COFFEE_URL } from '../config';
 import { SettingsModal } from './SettingsModal';
 import { Chevron } from './Chevron';
+import { useBackHandler } from '../backButton';
 
 const MENU = [
   { kind: 'library' as const, label: 'Início', icon: '🏠' },
@@ -35,6 +36,8 @@ export function Sidebar() {
       if (history.state?.vitrolaDrawer) history.back();
     };
   }, [isMobile, drawerOpen, closeDrawer]);
+
+  useBackHandler(isMobile && drawerOpen, closeDrawer);
 
   // Fecha a gaveta com Esc.
   useEffect(() => {

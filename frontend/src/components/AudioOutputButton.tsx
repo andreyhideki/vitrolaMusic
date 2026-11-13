@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { platform, type AudioOutputDevice, type AudioOutputKind } from '../platform';
 import { browserAudioOutput } from '../player/audioOutput';
 import { useNotice } from '../notice';
+import { useBackHandler } from '../backButton';
 
 const KIND_ICON: Record<AudioOutputKind, string> = {
   speaker: '🔈',
@@ -52,6 +53,8 @@ export function AudioOutputButton() {
     void refresh();
     return hooks?.onChange?.(() => void refresh());
   }, [hooks, refresh]);
+
+  useBackHandler(open, () => setOpen(false));
 
   useEffect(() => {
     if (!open) return;

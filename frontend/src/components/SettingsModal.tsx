@@ -6,6 +6,7 @@ import { playerControls } from '../player/usePlayerAudio';
 import { useNotice } from '../notice';
 import { useCarMode } from '../carMode';
 import { platform } from '../platform';
+import { useBackHandler } from '../backButton';
 
 interface Props {
   open: boolean;
@@ -51,6 +52,8 @@ export function SettingsModal({ open, onClose }: Props) {
       .then(setSettings)
       .catch((e) => setError(errorMessage(e)));
   }, [open]);
+
+  useBackHandler(open, onClose);
 
   if (!open) return null;
 

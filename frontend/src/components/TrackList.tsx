@@ -6,6 +6,7 @@ import { playerControls } from '../player/usePlayerAudio';
 import { usePlayerStore } from '../player/store';
 import { usePlayback } from '../player/playback';
 import { PlayingIcon, TrackPlayButton } from './TrackPlayButton';
+import { useBackHandler } from '../backButton';
 
 interface Props {
   tracks: TrackDto[];
@@ -21,6 +22,7 @@ export function TrackList({ tracks, showAlbum = false, onDelete }: Props) {
   const [notice, setNotice] = useState('');
   // Linha com ações expandidas no mobile (menu "⋯").
   const [openRow, setOpenRow] = useState<number | null>(null);
+  useBackHandler(openRow !== null, () => setOpenRow(null));
 
   // Usa a versão mais recente do cache (status de download atualizado).
   const list = tracks.map((t) => byId[String(t.id)] ?? t);
