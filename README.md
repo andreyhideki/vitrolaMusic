@@ -153,6 +153,7 @@ make mobile-test  # testa a API local pelos adaptadores Android
 - Os dados ficam no app e são apagados se ele for desinstalado.
 - A música continua com a tela apagada. Em celulares Xiaomi/Redmi (HyperOS/MIUI) e outros com economia de bateria agressiva, se ela parar depois de muito tempo, coloque o app em **Bateria → Sem restrições** nas informações do app.
 - O modo "tocar sem baixar" funciona no APK: o app pega a URL direta do áudio com o `yt-dlp` (leva alguns segundos para começar).
+- O botão (ou gesto) **voltar** do Android funciona como o ‹ do app: fecha o que estiver aberto (player do carro, Configurações, menus) e volta para a tela anterior. Na tela inicial, minimiza o app sem parar a música.
 - **No carro:** o app conversa com a central multimídia pelo Bluetooth. Ela mostra música, artista e álbum, e os botões de voltar, tocar/pausar e avançar do carro (e do volante) controlam o app. A notificação do celular e a tela de bloqueio também ganham capa e esses botões.
   - Se o carro desligar ou o Bluetooth cair, a música **pausa** (não continua no alto-falante do celular). Vale também para fone com fio ou Bluetooth.
   - **Modo carro:** quando o celular conecta no Bluetooth do carro, abre um player em tela cheia com a capa e botões grandes; ao desconectar, volta ao normal. O botão 🚗 do player abre a qualquer momento. Para reconhecer o carro, o Android pede a permissão **"Dispositivos próximos"** na primeira vez; dá para desligar a abertura automática nas Configurações.

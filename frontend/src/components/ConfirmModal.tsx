@@ -1,3 +1,5 @@
+import { useBackHandler } from '../backButton';
+
 interface ConfirmModalProps {
   open: boolean;
   title: string;
@@ -19,6 +21,7 @@ export function ConfirmModal({
   onConfirm,
   onCancel,
 }: ConfirmModalProps) {
+  useBackHandler(open, onCancel);
   if (!open) return null;
 
   return (

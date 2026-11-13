@@ -7,6 +7,7 @@
  */
 import { createRoot } from 'react-dom/client';
 import { App as CapApp } from '@capacitor/app';
+import { handleBack } from '../../frontend/src/backButton';
 import '../../frontend/src/styles.css';
 import { bootstrap } from './bootstrap';
 import { startKeepAlive } from './keepAlive';
@@ -31,6 +32,11 @@ async function start(): Promise<void> {
 
   // Grava o banco antes de o Android poder encerrar o app.
   void CapApp.addListener('pause', () => void flushAll());
+  // Botão/gesto "voltar" do Android: fecha o que está aberto ou volta uma tela no app.
+  // Na primeira tela, minimiza em vez de fechar (a música continua tocando).
+  void CapApp.addListener('backButton', () => {
+    if (!handleBack()) void CapApp.minimizeApp();
+  });
 
   const { App } = await import('../../frontend/src/App');
   root.render(<App />);
