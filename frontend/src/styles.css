@@ -690,6 +690,9 @@ button.small { padding: 4px 10px; font-size: 12px; }
 .track select { max-width: 150px; }
 .track .track-actions { display: contents; }
 .track .more-toggle { display: none; }
+.track.selected { background: var(--hover-bg); }
+.track .track-select { width: 20px; height: 20px; flex-shrink: 0; cursor: pointer; }
+.selection-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 0 0 8px; }
 .track .drag-handle {
   background: none; border: none; padding: 4px 2px; color: var(--muted, #888);
   cursor: grab; touch-action: none; font-size: 14px; letter-spacing: -2px; line-height: 1;
@@ -929,6 +932,12 @@ body.theme-light .warning-box { background: #ff6b6b18; color: #b53b3b; }
 
 .toggle input {
   width: auto;
+}
+
+.modal label.confirm-option {
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 8px;
 }
 
 .form-group {

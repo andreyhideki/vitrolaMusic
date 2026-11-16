@@ -537,6 +537,44 @@ export function deletePlaylist(id: number): void {
   db.prepare('DELETE FROM playlists WHERE id = ?').run(id);
 }
 
+/**
+ * Exclui várias faixas de uma vez. Álbuns que ficarem sem faixas também são removidos.
+ * Devolve os arquivos a apagar do disco.
+ */
+export function deleteTracks(ids: number[]): { filePaths: string[] } {
+  const select = db.prepare('SELECT album_id, file_path FROM tracks WHERE id = ?');
+  const deleteTrackStmt = db.prepare('DELETE FROM tracks WHERE id = ?');
+  const albumHasTracks = db.prepare('SELECT 1 FROM tracks WHERE album_id = ? LIMIT 1');
+  const deleteAlbumStmt = db.prepare('DELETE FROM albums WHERE id = ?');
+  const filePaths: string[] = [];
+  const albumIds = new Set<number>();
+  db.transaction(() => {
+    for (const id of new Set(ids)) {
+      const row = select.get(id) as { album_id: number; file_path: string | null } | undefined;
+      if (!row) continue;
+      deleteTrackStmt.run(id);
+      albumIds.add(row.album_id);
+      if (row.file_path) filePaths.push(row.file_path);
+    }
+    for (const albumId of albumIds) {
+      if (!albumHasTracks.get(albumId)) deleteAlbumStmt.run(albumId);
+    }
+  })();
+  return { filePaths };
+}
+
+/**
+ * Exclui a playlist e as faixas dela (inclusive de outras playlists que as tenham).
+ * Álbuns que ficarem sem faixas também são removidos. Devolve os arquivos a apagar.
+ */
+export function deletePlaylistWithTracks(id: number): { filePaths: string[] } {
+  const trackIds = (db.prepare('SELECT DISTINCT track_id FROM playlist_entries WHERE playlist_id = ?').all(id) as {
+    track_id: number;
+  }[]).map((r) => r.track_id);
+  deletePlaylist(id);
+  return deleteTracks(trackIds);
+}
+
 export function addTracks(playlistId: number, trackIds: number[]): void {
   const insert = db.prepare('INSERT INTO playlist_entries (playlist_id, track_id, position) VALUES (?, ?, ?)');
   const maxPos = db.prepare('SELECT COALESCE(MAX(position), 0) AS m FROM playlist_entries WHERE playlist_id = ?');

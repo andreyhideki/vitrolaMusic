@@ -8,7 +8,7 @@ import * as repo from '../repo.js';
 import { enqueueDownload } from '../services/downloader.js';
 import { resolveTrackFile } from '../settings.js';
 import { getStreamUrl, downloadProgress } from '../services/external.js';
-import { HttpError, parseId } from '../http.js';
+import { HttpError, idList, parseId } from '../http.js';
 
 export const tracksRouter = Router();
 
@@ -46,6 +46,14 @@ tracksRouter.post('/:id/download', (req, res) => {
   repo.resetAttempts(id);
   enqueueDownload(id);
   res.status(202).json(repo.getTrack(id));
+});
+
+// Exclusão em lote (até 500 ids por chamada): registros, arquivos e álbuns que ficarem vazios.
+tracksRouter.post('/delete', async (req, res) => {
+  const { filePaths } = repo.deleteTracks(idList(req.body?.trackIds, 'trackIds'));
+  const safe = filePaths.map(resolveTrackFile).filter((p): p is string => !!p);
+  await Promise.all(safe.map((p) => fsp.rm(p, { force: true })));
+  res.status(204).end();
 });
 
 tracksRouter.delete('/:id', async (req, res) => {

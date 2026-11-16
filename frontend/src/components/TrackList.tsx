@@ -12,9 +12,14 @@ interface Props {
   tracks: TrackDto[];
   showAlbum?: boolean;
   onDelete?: (trackId: number) => void;
+  /**
+   * Quando presente, mostra o botão "Selecionar" para excluir várias faixas de uma vez.
+   * Se resolver `true` (excluiu), a seleção é encerrada.
+   */
+  onDeleteMany?: (trackIds: number[]) => Promise<boolean>;
 }
 
-export function TrackList({ tracks, showAlbum = false, onDelete }: Props) {
+export function TrackList({ tracks, showAlbum = false, onDelete, onDeleteMany }: Props) {
   const byId = useLibrary((s) => s.byId);
   const currentTrackId = usePlayerStore((s) => s.currentTrackId);
   const playing = usePlayback((s) => s.playing);
@@ -23,10 +28,30 @@ export function TrackList({ tracks, showAlbum = false, onDelete }: Props) {
   // Linha com ações expandidas no mobile (menu "⋯").
   const [openRow, setOpenRow] = useState<number | null>(null);
   useBackHandler(openRow !== null, () => setOpenRow(null));
+  // Modo de seleção múltipla (exclusão em lote).
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const exitSelection = () => {
+    setSelecting(false);
+    setSelected(new Set());
+  };
+  useBackHandler(selecting, exitSelection);
 
   // Usa a versão mais recente do cache (status de download atualizado).
   const list = tracks.map((t) => byId[String(t.id)] ?? t);
   const ids = list.map((t) => String(t.id));
+  // Ignora seleções de faixas que saíram da lista (ex.: depois de excluir).
+  const selectedIds = list.filter((t) => selected.has(t.id)).map((t) => t.id);
+  const allSelected = list.length > 0 && selectedIds.length === list.length;
+
+  function toggleSelected(id: number) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   useEffect(() => {
     api<PlaylistSummary[]>('/playlists').then(setPlaylists).catch(() => {});
@@ -56,6 +81,37 @@ export function TrackList({ tracks, showAlbum = false, onDelete }: Props) {
 
   return (
     <>
+      {onDeleteMany && list.length > 0 && (
+        <div className="selection-bar">
+          {selecting ? (
+            <>
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={() => setSelected(allSelected ? new Set() : new Set(list.map((t) => t.id)))}
+                />
+                <span>Todas</span>
+              </label>
+              <span className="muted">
+                {selectedIds.length} selecionada{selectedIds.length !== 1 ? 's' : ''}
+              </span>
+              <button
+                className="danger"
+                disabled={selectedIds.length === 0}
+                onClick={async () => {
+                  if (await onDeleteMany(selectedIds)) exitSelection();
+                }}
+              >
+                Excluir selecionadas
+              </button>
+              <button onClick={exitSelection}>Cancelar</button>
+            </>
+          ) : (
+            <button onClick={() => setSelecting(true)}>Selecionar</button>
+          )}
+        </div>
+      )}
       <ol className="tracks">
         {list.map((t, i) => {
           const ready = t.downloadStatus === 'ready';
@@ -65,8 +121,17 @@ export function TrackList({ tracks, showAlbum = false, onDelete }: Props) {
               key={`${t.id}-${i}`}
               className={`track ${ready ? '' : 'unavailable'} ${isCurrent ? 'playing' : ''} ${
                 openRow === i ? 'actions-open' : ''
-              }`}
+              } ${selecting && selected.has(t.id) ? 'selected' : ''}`}
             >
+              {selecting && (
+                <input
+                  type="checkbox"
+                  className="track-select"
+                  checked={selected.has(t.id)}
+                  onChange={() => toggleSelected(t.id)}
+                  aria-label={`Selecionar ${t.title}`}
+                />
+              )}
               <TrackPlayButton trackId={t.id} title={t.title} ready={ready} onPlay={() => playerControls.playFrom(ids, i)} />
               <span className="num muted">
                 {isCurrent && playing ? <PlayingIcon /> : (t.trackNumber ?? i + 1)}

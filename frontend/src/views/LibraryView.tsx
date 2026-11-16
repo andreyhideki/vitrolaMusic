@@ -11,9 +11,17 @@ import { TrackList } from '../components/TrackList';
 import { AlbumCarousel } from '../components/AlbumCarousel';
 import { fmtBytes } from '../format';
 
+type LibraryMode = 'home' | 'albums' | 'tracks';
+
+const VIEW_OPTIONS: { id: LibraryMode; label: string }[] = [
+  { id: 'home', label: 'Início' },
+  { id: 'albums', label: 'Álbuns baixados' },
+  { id: 'tracks', label: 'Músicas baixadas' },
+];
+
 interface LibraryState {
   genre: number | '';
-  view: 'home' | 'albums';
+  view: LibraryMode;
 }
 
 export function LibraryView() {
@@ -24,9 +32,15 @@ export function LibraryView() {
   const [genres, setGenres] = useState<GenreDto[]>([]);
   const [usage, setUsage] = useState<{ bytes: number; trackCount: number } | null>(null);
   const [genre, setGenre] = useState<number | ''>(saved?.genre ?? '');
-  const [view, setView] = useState<'home' | 'albums'>(saved?.view ?? 'home');
+  const [view, setView] = useState<LibraryMode>(saved?.view ?? 'home');
   const [error, setError] = useState('');
-  const [confirm, setConfirm] = useState<{ open: boolean; title: string; message: string; onConfirm: () => void } | null>(null);
+  const [confirm, setConfirm] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    onCancel?: () => void;
+  } | null>(null);
   const go = useNav((s) => s.go);
   const currentTrackId = usePlayerStore((s) => s.currentTrackId);
   const playing = usePlayback((s) => s.playing);
@@ -91,6 +105,35 @@ export function LibraryView() {
     }
   }
 
+  /** Confirma e exclui várias faixas; resolve `true` se excluiu. */
+  function askDeleteTracks(trackIds: number[]): Promise<boolean> {
+    return new Promise((resolve) => {
+      const n = trackIds.length;
+      setConfirm({
+        open: true,
+        title: 'Excluir faixas',
+        message: `Excluir ${n} faixa${n !== 1 ? 's' : ''}? Os arquivos também são apagados do disco.`,
+        onConfirm: async () => {
+          setConfirm(null);
+          try {
+            for (let i = 0; i < trackIds.length; i += 500) {
+              await send('POST', '/tracks/delete', { trackIds: trackIds.slice(i, i + 500) });
+            }
+            resolve(true);
+          } catch (err) {
+            setError(errorMessage(err));
+            resolve(false);
+          }
+          load();
+        },
+        onCancel: () => {
+          setConfirm(null);
+          resolve(false);
+        },
+      });
+    });
+  }
+
   function askDeleteAlbum(a: AlbumDto) {
     setConfirm({
       open: true,
@@ -105,9 +148,8 @@ export function LibraryView() {
 
   const [pendingTrack, setPendingTrack] = useState<TrackDto | null>(null);
 
-  const readyTrackIds = (library?.tracks ?? [])
-    .filter((t) => t.downloadStatus === 'ready')
-    .map((t) => String(t.id));
+  const readyTracks = (library?.tracks ?? []).filter((t) => t.downloadStatus === 'ready');
+  const readyTrackIds = readyTracks.map((t) => String(t.id));
 
   function albumTrackIds(albumId: number): string[] {
     return (library?.tracks ?? [])
@@ -205,15 +247,23 @@ export function LibraryView() {
         <span className="muted" style={{ marginLeft: 'auto' }}>
           Visualização:
         </span>
-        <button
-          className={`badge ${view === 'albums' ? 'active' : ''}`}
-          onClick={() => setView(view === 'albums' ? 'home' : 'albums')}
-        >
-          {view === 'albums' ? 'Início' : 'Álbuns baixados'}
-        </button>
+        {VIEW_OPTIONS.map((o) => (
+          <button key={o.id} className={`badge ${view === o.id ? 'active' : ''}`} onClick={() => setView(o.id)}>
+            {o.label}
+          </button>
+        ))}
       </div>
 
-      {view === 'albums' ? (
+      {view === 'tracks' ? (
+        <>
+          <h2>Músicas baixadas</h2>
+          {library && readyTracks.length === 0 ? (
+            <p className="muted">Nenhuma música baixada ainda. Use a busca para importar.</p>
+          ) : (
+            library && <TrackList tracks={readyTracks} showAlbum onDelete={askDeleteTrack} onDeleteMany={askDeleteTracks} />
+          )}
+        </>
+      ) : view === 'albums' ? (
         <>
           <h2>Álbuns baixados</h2>
           {library && library.albums.length === 0 ? (
@@ -289,7 +339,7 @@ export function LibraryView() {
           {library && library.tracks.length === 0 ? (
             <p className="muted">Nenhuma faixa baixada ainda. Use a busca para importar.</p>
           ) : (
-            library && <TrackList tracks={library.tracks} showAlbum onDelete={askDeleteTrack} />
+            library && <TrackList tracks={library.tracks} showAlbum onDelete={askDeleteTrack} onDeleteMany={askDeleteTracks} />
           )}
         </>
       )}
@@ -303,7 +353,7 @@ export function LibraryView() {
           cancelText="Cancelar"
           danger
           onConfirm={confirm.onConfirm}
-          onCancel={() => setConfirm(null)}
+          onCancel={confirm.onCancel ?? (() => setConfirm(null))}
         />
       )}
     </section>

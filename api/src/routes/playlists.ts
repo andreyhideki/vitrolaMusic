@@ -1,6 +1,8 @@
+import fsp from 'node:fs/promises';
 import { Router } from 'express';
 import * as repo from '../repo.js';
 import { HttpError, idList, parseId, requireString } from '../http.js';
+import { resolveTrackFile } from '../settings.js';
 
 export const playlistsRouter = Router();
 
@@ -41,10 +43,17 @@ playlistsRouter.patch('/:id', (req, res) => {
   res.json(repo.getPlaylist(id));
 });
 
-playlistsRouter.delete('/:id', (req, res) => {
+// `?tracks=1` também apaga as faixas da playlist (registros e arquivos).
+playlistsRouter.delete('/:id', async (req, res) => {
   const id = parseId(req.params.id);
   ensurePlaylist(id);
-  repo.deletePlaylist(id);
+  if (req.query.tracks === '1') {
+    const { filePaths } = repo.deletePlaylistWithTracks(id);
+    const safe = filePaths.map(resolveTrackFile).filter((p): p is string => !!p);
+    await Promise.all(safe.map((p) => fsp.rm(p, { force: true })));
+  } else {
+    repo.deletePlaylist(id);
+  }
   res.status(204).end();
 });
 

@@ -1,3 +1,4 @@
+import { ReactNode } from 'react';
 import { useBackHandler } from '../backButton';
 
 interface ConfirmModalProps {
@@ -9,6 +10,8 @@ interface ConfirmModalProps {
   danger?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
+  /** Conteúdo extra abaixo da mensagem (ex.: uma opção com checkbox). */
+  children?: ReactNode;
 }
 
 export function ConfirmModal({
@@ -20,6 +23,7 @@ export function ConfirmModal({
   danger = true,
   onConfirm,
   onCancel,
+  children,
 }: ConfirmModalProps) {
   useBackHandler(open, onCancel);
   if (!open) return null;
@@ -29,6 +33,7 @@ export function ConfirmModal({
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <h2>{title}</h2>
         <p>{message}</p>
+        {children}
         <div className="modal-actions">
           <button type="button" onClick={onCancel}>{cancelText}</button>
           <button type="button" className={danger ? 'danger' : 'primary'} onClick={onConfirm}>

@@ -44,7 +44,8 @@ export function PlaylistView({ id }: { id: number }) {
   const saved = getState<PlaylistViewState>({ kind: 'playlist', id });
   const [detail, setDetail] = useState<PlaylistDetail | null>(null);
   const [error, setError] = useState('');
-  const [confirm, setConfirm] = useState<{ open: boolean; title: string; message: string; onConfirm: () => void } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteTracks, setDeleteTracks] = useState(false);
   const [query, setQuery] = useState(saved?.query ?? '');
   const [searchResults, setSearchResults] = useState<TrackDto[]>(saved?.searchResults ?? []);
   const [suggestions, setSuggestions] = useState<TrackDto[]>([]);
@@ -147,20 +148,18 @@ export function PlaylistView({ id }: { id: number }) {
   }
 
   function askDeletePlaylist() {
-    setConfirm({
-      open: true,
-      title: 'Excluir playlist',
-      message: 'Excluir esta playlist? As faixas não são apagadas.',
-      onConfirm: async () => {
-        setConfirm(null);
-        try {
-          await send('DELETE', `/playlists/${id}`);
-          go({ kind: 'playlists' });
-        } catch (e) {
-          setError(errorMessage(e));
-        }
-      },
-    });
+    setDeleteTracks(false);
+    setConfirmDelete(true);
+  }
+
+  async function deletePlaylist() {
+    setConfirmDelete(false);
+    try {
+      await send('DELETE', `/playlists/${id}${deleteTracks ? '?tracks=1' : ''}`);
+      go({ kind: 'playlists' });
+    } catch (e) {
+      setError(errorMessage(e));
+    }
   }
 
   return (
@@ -265,18 +264,27 @@ export function PlaylistView({ id }: { id: number }) {
         </>
       )}
 
-      {confirm && (
-        <ConfirmModal
-          open={confirm.open}
-          title={confirm.title}
-          message={confirm.message}
-          confirmText="Excluir"
-          cancelText="Cancelar"
-          danger
-          onConfirm={confirm.onConfirm}
-          onCancel={() => setConfirm(null)}
-        />
-      )}
+      <ConfirmModal
+        open={confirmDelete}
+        title="Excluir playlist"
+        message={
+          deleteTracks
+            ? `Excluir esta playlist e apagar as ${entries.length} faixas dela? As faixas saem também da biblioteca, do disco e de outras playlists.`
+            : 'Excluir esta playlist? As faixas continuam na biblioteca.'
+        }
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        danger
+        onConfirm={deletePlaylist}
+        onCancel={() => setConfirmDelete(false)}
+      >
+        {entries.length > 0 && (
+          <label className="toggle confirm-option">
+            <input type="checkbox" checked={deleteTracks} onChange={(e) => setDeleteTracks(e.target.checked)} />
+            <span>Apagar também as músicas desta playlist</span>
+          </label>
+        )}
+      </ConfirmModal>
     </section>
   );
 }
