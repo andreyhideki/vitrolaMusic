@@ -37,6 +37,8 @@ services:
       # Destino do proxy /api do Vite, dentro da rede do compose
       API_TARGET: http://api:5172
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-}
+      # Commit exibido em Configurações → Versão (o Makefile preenche; o container não tem .git)
+      VITROLA_COMMIT: ${VITROLA_COMMIT:-}
       # Necessário para hot reload em bind mounts (macOS e Windows)
       CHOKIDAR_USEPOLLING: "true"
     volumes:

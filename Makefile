@@ -2,6 +2,8 @@
 # Requisito: Docker com Compose v2. Use "make help" para ver os alvos.
 
 COMPOSE ?= docker compose
+# Commit exibido em Configurações → Versão (o container do frontend não tem .git).
+export VITROLA_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null)
 
 .DEFAULT_GOAL := help
 .PHONY: help check-docker fix-perms token up down restart logs ps build shell-api shell-web test typecheck audit reset local-install clean

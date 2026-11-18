@@ -430,6 +430,7 @@ input, select {
 .header h1 { margin: 0 0 8px; font-size: 40px; }
 
 .actions { display: flex; gap: 8px; margin-bottom: 16px; }
+.modal .version-ok { color: var(--accent); }
 .create { display: flex; gap: 8px; margin-bottom: 16px; }
 .create input { flex: 1; max-width: 360px; }
 

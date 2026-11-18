@@ -29,6 +29,7 @@ async function start(): Promise<void> {
   await detectMediaRangeMode();
   platform.audioOutput = androidAudioOutput;
   platform.car = androidCar;
+  platform.nativeApp = true;
 
   // Grava o banco antes de o Android poder encerrar o app.
   void CapApp.addListener('pause', () => void flushAll());

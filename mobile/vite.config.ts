@@ -4,6 +4,7 @@ import path from 'node:path';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import { appVersion } from '../frontend/vite-version';
 
 /**
  * Build do APK. Reaproveita o código existente sem copiá-lo:
@@ -48,7 +49,7 @@ export default defineConfig(({ command }) => ({
   // Mesmas variáveis do frontend (ex.: URL_BUY_ME_A_COFFEE em frontend/.env).
   envDir: frontendDir,
   envPrefix: ['VITE_', 'URL_'],
-  plugins: [apiOverrides(), react()],
+  plugins: [apiOverrides(), react(), appVersion()],
   // No build o Vite troca `process.env` por `{}`, e `api/src/config.ts` perderia o
   // DATA_DIR/IMPORT_DIR que o bootstrap define em tempo de execução. Aqui ele passa a ler
   // o `process` criado pelo bootstrap. (Nos testes roda no Node, com o `process` real.)

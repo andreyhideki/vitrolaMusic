@@ -13,6 +13,11 @@ export interface PlatformHooks {
   audioOutput?: AudioOutputHooks;
   /** Detecção do carro (APK: Bluetooth do carro conectado). Sem isto, o modo carro é só manual. */
   car?: CarHooks;
+  /**
+   * App nativo (APK): a interface vem dentro do pacote, então não há versão nova a buscar
+   * no servidor; atualiza instalando outro APK.
+   */
+  nativeApp?: boolean;
 }
 
 export interface CarState {

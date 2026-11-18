@@ -7,6 +7,7 @@ import { useNotice } from '../notice';
 import { useCarMode } from '../carMode';
 import { platform } from '../platform';
 import { useBackHandler } from '../backButton';
+import { APP_VERSION, AppVersion, fetchServerVersion, forceUpdate, formatVersion, sameVersion } from '../version';
 
 interface Props {
   open: boolean;
@@ -347,6 +348,8 @@ export function SettingsModal({ open, onClose }: Props) {
             )}
           </div>
 
+          <VersionInfo open={open} />
+
           {error && <p className="error">{error}</p>}
 
           <div className="modal-actions">
@@ -361,4 +364,73 @@ export function SettingsModal({ open, onClose }: Props) {
   );
 
   return createPortal(modal, document.body);
+}
+
+/** Versão em execução e, no navegador, comparação com a do servidor + "Forçar atualização". */
+function VersionInfo({ open }: { open: boolean }) {
+  const [server, setServer] = useState<AppVersion | null>(null);
+  const [checkError, setCheckError] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const native = !!platform.nativeApp;
+
+  async function check() {
+    setCheckError(false);
+    setServer(null);
+    try {
+      setServer(await fetchServerVersion());
+    } catch {
+      setCheckError(true);
+    }
+  }
+
+  useEffect(() => {
+    if (open && !native) void check();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const outdated = server !== null && !sameVersion(APP_VERSION, server);
+
+  return (
+    <div className="form-group">
+      <label>Versão</label>
+      <p className="hint">
+        Em uso: <code>{formatVersion(APP_VERSION)}</code>
+        {server && outdated && (
+          <>
+            <br />
+            No servidor: <code>{formatVersion(server)}</code>
+          </>
+        )}
+      </p>
+      {native ? (
+        <p className="hint">No app Android, atualize instalando o APK novo.</p>
+      ) : (
+        <>
+          {server === null && !checkError && <p className="hint">Verificando…</p>}
+          {checkError && <p className="error">Não foi possível consultar a versão do servidor.</p>}
+          {server && (outdated ? (
+            <p className="error">Desatualizada: há uma versão mais nova no servidor.</p>
+          ) : (
+            <p className="hint version-ok">Atualizada.</p>
+          ))}
+          <div className="actions">
+            <button type="button" className="small" onClick={() => void check()}>
+              Verificar de novo
+            </button>
+            <button
+              type="button"
+              className={`small ${outdated ? 'primary' : ''}`}
+              disabled={updating}
+              onClick={() => {
+                setUpdating(true);
+                void forceUpdate();
+              }}
+            >
+              {updating ? 'Atualizando…' : 'Forçar atualização'}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
