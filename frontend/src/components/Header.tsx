@@ -1,3 +1,4 @@
+import { useCarMode } from '../carMode';
 import { useNav } from '../nav';
 import { useTheme } from '../theme';
 import { useUi } from '../ui';
@@ -8,6 +9,7 @@ export function Header() {
   const { theme, toggle } = useTheme();
   const isMobile = useUi((s) => s.screen === 'mobile');
   const openDrawer = useUi((s) => s.openDrawer);
+  const showCar = useCarMode((s) => s.show);
 
   return (
     <header className="top-bar">
@@ -24,9 +26,17 @@ export function Header() {
           <Chevron direction="right" />
         </button>
       </div>
-      <button className="theme-toggle" onClick={toggle} aria-label="Alternar tema">
-        {theme === 'dark' ? '☀' : '☾'}
-      </button>
+      <div className="top-actions">
+        {/* No celular o 🚗 do player fica escondido (falta espaço): o atalho para o modo carro fica aqui. */}
+        {isMobile && (
+          <button className="theme-toggle" onClick={showCar} aria-label="Abrir o player do carro" title="Modo carro">
+            🚗
+          </button>
+        )}
+        <button className="theme-toggle" onClick={toggle} aria-label="Alternar tema">
+          {theme === 'dark' ? '☀' : '☾'}
+        </button>
+      </div>
     </header>
   );
 }

@@ -108,6 +108,7 @@ body.theme-light .sidebar .collapse-toggle {
 .top-bar .nav-buttons button:disabled { opacity: 0.35; cursor: default; }
 .chevron { display: block; flex: none; }
 
+.top-actions { display: flex; align-items: center; gap: 8px; }
 .theme-toggle {
   width: 36px;
   height: 36px;
