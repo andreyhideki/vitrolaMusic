@@ -54,3 +54,28 @@ jobs:
         run: npm run typecheck --prefix mobile
       - name: Testes do mobile
         run: npm test --prefix mobile
+
+  # APK de teste para PRs: assinado com a mesma chave dos releases (instala por cima do app),
+  # anexado como artefato do workflow. PRs de forks não recebem os secrets: o job é pulado.
+  apk:
+    name: APK de teste
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - id: build
+        uses: ./.github/actions/build-apk
+        with:
+          keystore-base64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          keystore-password: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          key-alias: ${{ secrets.ANDROID_KEY_ALIAS }}
+          key-password: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      - name: Nome do artefato
+        id: name
+        run: echo "name=vitrola-music-pr${{ github.event.pull_request.number }}-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.name.outputs.name }}
+          path: ${{ steps.build.outputs.apk }}
+          retention-days: 14
+          if-no-files-found: error

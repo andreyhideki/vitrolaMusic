@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Versão manual (o fluxo normal é o PR do release-please, ver .github/workflows/release-please.yml).
 # Prepara uma versão: sobe "version" em api/, frontend/ e mobile/ (package.json + lock),
 # faz o commit e cria a tag vX.Y.Z. Não faz push: o push da tag dispara o workflow
 # .github/workflows/release.yml, que gera o APK e publica o GitHub Release.
@@ -30,6 +31,13 @@ fi
 for dir in api frontend mobile; do
   (cd "$dir" && npm version "$version" --no-git-tag-version --allow-same-version >/dev/null)
 done
+
+# Versão final (sem sufixo): avisa o release-please, senão o próximo PR de versão calcula a partir
+# da versão antiga. Pré-releases não mexem no manifesto.
+if [[ "$version" != *-* ]]; then
+  node -e 'const f=".release-please-manifest.json",m=require("./"+f);m["."]=process.argv[1];require("fs").writeFileSync(f,JSON.stringify(m,null,2)+"\n")' "$version"
+  git add .release-please-manifest.json
+fi
 
 git add api/package.json api/package-lock.json frontend/package.json frontend/package-lock.json \
   mobile/package.json mobile/package-lock.json

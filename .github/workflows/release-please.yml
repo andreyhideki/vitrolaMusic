@@ -1,0 +1,42 @@
+# Versões automáticas a partir dos commits (Conventional Commits):
+# a cada push na main, o release-please abre/atualiza o PR "chore(main): release X.Y.Z" com a
+# próxima versão nos package.json e o CHANGELOG.md (feat: → minor, fix:/perf: → patch,
+# "!" ou BREAKING CHANGE → major). O merge desse PR cria a tag vX.Y.Z e o GitHub Release, e
+# então o release.yml gera e anexa o APK.
+# Tags criadas com o GITHUB_TOKEN não disparam outros workflows: por isso o release.yml é
+# chamado daqui, e não pelo push da tag.
+name: Release Please
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      created: ${{ steps.rp.outputs.release_created }}
+      tag: ${{ steps.rp.outputs.tag_name }}
+    steps:
+      - id: rp
+        uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  apk:
+    needs: release-please
+    if: needs.release-please.outputs.created == 'true'
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.release-please.outputs.tag }}
+    secrets: inherit

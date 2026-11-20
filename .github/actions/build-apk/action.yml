@@ -1,0 +1,83 @@
+# Gera o APK de release assinado (usado pelo release.yml, release-please.yml e ci.yml).
+# Composite actions não leem secrets: o workflow passa a chave pelos inputs.
+name: Build APK
+description: Testa o mobile/, gera o build web, faz o cap sync e o assembleRelease assinado.
+
+inputs:
+  keystore-base64:
+    description: Keystore em base64 (secret ANDROID_KEYSTORE_BASE64)
+    required: true
+  keystore-password:
+    description: Senha do keystore
+    required: true
+  key-alias:
+    description: Alias da chave
+    required: true
+  key-password:
+    description: Senha da chave (vazio = a do keystore)
+    required: false
+    default: ''
+
+outputs:
+  apk:
+    description: Caminho do APK gerado
+    value: mobile/android/app/build/outputs/apk/release/app-release.apk
+
+runs:
+  using: composite
+  steps:
+    - name: Conferir os secrets de assinatura
+      shell: bash
+      env:
+        KEYSTORE: ${{ inputs.keystore-base64 }}
+        PASSWORD: ${{ inputs.keystore-password }}
+        ALIAS: ${{ inputs.key-alias }}
+      run: |
+        if [ -z "$KEYSTORE" ] || [ -z "$PASSWORD" ] || [ -z "$ALIAS" ]; then
+          echo "::error::Configure os secrets ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD e ANDROID_KEY_ALIAS (ver o README, seção Versões)."
+          exit 1
+        fi
+
+    - uses: actions/setup-node@v5
+      with:
+        node-version: 24
+        cache: npm
+        cache-dependency-path: mobile/package-lock.json
+
+    - uses: actions/setup-java@v5
+      with:
+        distribution: temurin
+        java-version: 21
+        cache: gradle
+
+    - shell: bash
+      run: npm ci --prefix mobile
+
+    - name: Typecheck e testes
+      shell: bash
+      run: |
+        npm run typecheck --prefix mobile
+        npm test --prefix mobile
+
+    - name: Build web e cap sync
+      shell: bash
+      working-directory: mobile
+      run: |
+        npx vite build
+        npx cap sync android
+
+    - name: Gerar o APK assinado
+      shell: bash
+      working-directory: mobile/android
+      env:
+        KEYSTORE_BASE64: ${{ inputs.keystore-base64 }}
+        VITROLA_KEYSTORE_PASSWORD: ${{ inputs.keystore-password }}
+        VITROLA_KEY_ALIAS: ${{ inputs.key-alias }}
+        VITROLA_KEY_PASSWORD: ${{ inputs.key-password }}
+      run: |
+        export VITROLA_KEYSTORE="$RUNNER_TEMP/vitrola.keystore"
+        echo "$KEYSTORE_BASE64" | base64 -d > "$VITROLA_KEYSTORE"
+        # O script gradlew não é versionado (.gitignore): roda o wrapper direto pelo jar.
+        java -classpath gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain \
+          assembleRelease --no-daemon --stacktrace
+        rm -f "$VITROLA_KEYSTORE"

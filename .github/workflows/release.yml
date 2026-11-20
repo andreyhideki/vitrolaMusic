@@ -1,7 +1,8 @@
-# Gera uma versão: o push de uma tag vX.Y.Z (criada pelo `make release VERSION=X.Y.Z`)
-# testa, gera o APK de release assinado e publica um GitHub Release com o APK anexado.
+# Gera o APK de uma versão e anexa ao GitHub Release.
+# - Automático: o release-please.yml chama este workflow quando o PR de versão entra na main.
+# - Manual: push de uma tag vX.Y.Z criada pelo `make release VERSION=X.Y.Z` (ex.: pré-releases).
 #
-# Secrets necessários (Settings → Secrets and variables → Actions):
+# Secrets necessários (Settings → Secrets and variables → Actions → Repository secrets):
 #   ANDROID_KEYSTORE_BASE64    keystore em base64 (base64 -w0 minha.keystore)
 #   ANDROID_KEYSTORE_PASSWORD  senha do keystore
 #   ANDROID_KEY_ALIAS          alias da chave
@@ -11,9 +12,24 @@ name: Release
 on:
   push:
     tags: ['v*.*.*']
+  workflow_call:
+    inputs:
+      tag:
+        description: Tag da versão (vX.Y.Z)
+        required: true
+        type: string
+    secrets:
+      ANDROID_KEYSTORE_BASE64:
+        required: true
+      ANDROID_KEYSTORE_PASSWORD:
+        required: true
+      ANDROID_KEY_ALIAS:
+        required: true
+      ANDROID_KEY_PASSWORD:
+        required: false
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ inputs.tag || github.ref_name }}
   cancel-in-progress: false
 
 permissions:
@@ -24,10 +40,11 @@ jobs:
     name: APK e GitHub Release
     runs-on: ubuntu-latest
     env:
-      VERSION: ${{ github.ref_name }}
+      VERSION: ${{ inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v5
         with:
+          ref: ${{ inputs.tag || github.ref }}
           fetch-depth: 0
 
       - name: Conferir a versão dos package.json
@@ -41,70 +58,35 @@ jobs:
             fi
           done
 
-      - name: Conferir os secrets de assinatura
-        env:
-          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-        run: |
-          if [ -z "$KEYSTORE" ] || [ -z "$PASSWORD" ] || [ -z "$ALIAS" ]; then
-            echo "::error::Configure os secrets ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD e ANDROID_KEY_ALIAS (ver o README, seção Versões)."
-            exit 1
-          fi
-
-      - uses: actions/setup-node@v5
+      - id: build
+        uses: ./.github/actions/build-apk
         with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: mobile/package-lock.json
-
-      - uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: 21
-          cache: gradle
-
-      - run: npm ci --prefix mobile
-
-      - name: Typecheck e testes
-        run: |
-          npm run typecheck --prefix mobile
-          npm test --prefix mobile
-
-      - name: Build web e cap sync
-        working-directory: mobile
-        run: |
-          npx vite build
-          npx cap sync android
-
-      - name: Gerar o APK assinado
-        working-directory: mobile/android
-        env:
-          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          VITROLA_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          VITROLA_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          VITROLA_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: |
-          export VITROLA_KEYSTORE="$RUNNER_TEMP/vitrola.keystore"
-          echo "$KEYSTORE_BASE64" | base64 -d > "$VITROLA_KEYSTORE"
-          # O script gradlew não é versionado (.gitignore): roda o wrapper direto pelo jar.
-          java -classpath gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain \
-            assembleRelease --no-daemon --stacktrace
-          rm -f "$VITROLA_KEYSTORE"
+          keystore-base64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          keystore-password: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          key-alias: ${{ secrets.ANDROID_KEY_ALIAS }}
+          key-password: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
       - name: Preparar os arquivos
+        env:
+          APK: ${{ steps.build.outputs.apk }}
         run: |
           mkdir -p out
-          cp mobile/android/app/build/outputs/apk/release/app-release.apk "out/vitrola-music-$VERSION.apk"
+          cp "$APK" "out/vitrola-music-$VERSION.apk"
           (cd out && sha256sum *.apk > SHA256SUMS.txt)
           ls -l out
 
-      - name: Publicar o GitHub Release
+      # O release-please já cria o release (com as notas do CHANGELOG): aí só anexa o APK.
+      # No push manual de tag, cria o release com notas geradas a partir dos commits.
+      - name: Publicar no GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          flags=()
-          case "$VERSION" in *-*) flags+=(--prerelease);; esac
-          gh release create "$VERSION" out/* \
-            --title "Vitrola Music $VERSION" \
-            --generate-notes --verify-tag "${flags[@]}"
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            gh release upload "$VERSION" out/* --clobber
+          else
+            flags=()
+            case "$VERSION" in *-*) flags+=(--prerelease);; esac
+            gh release create "$VERSION" out/* \
+              --title "Vitrola Music $VERSION" \
+              --generate-notes --verify-tag "${flags[@]}"
+          fi

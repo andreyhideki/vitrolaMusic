@@ -179,15 +179,13 @@ Para depurar a interface no aparelho, abra `chrome://inspect` no Chrome do Windo
 
 ### Versões (GitHub Actions)
 
-- **CI** (`.github/workflows/ci.yml`): a cada push na `main` e em PRs roda o typecheck da API, do frontend e do `mobile/` e os testes do frontend e do `mobile/`.
-- **Release** (`.github/workflows/release.yml`): o push de uma tag `vX.Y.Z` confere se os três `package.json` estão nessa versão, roda os testes, gera o APK de release **assinado** e publica um GitHub Release com `vitrola-music-vX.Y.Z.apk`, o `SHA256SUMS.txt` e notas geradas a partir dos commits. Tags com sufixo (`v0.3.0-beta.1`) viram pré-release.
+- **CI** (`.github/workflows/ci.yml`): a cada push na `main` e em PRs roda o typecheck da API, do frontend e do `mobile/` e os testes do frontend e do `mobile/`. Nos PRs (do próprio repositório) também gera um **APK de teste** assinado, anexado como artefato do workflow por 14 dias (aba *Actions* → execução do PR → *Artifacts*).
+- **Versões automáticas** (`.github/workflows/release-please.yml`): a cada push na `main`, o [release-please](https://github.com/googleapis/release-please) abre ou atualiza um PR `chore: versão X.Y.Z` com a próxima versão nos três `package.json` e o `CHANGELOG.md`, calculados pelas mensagens de commit: `feat:` sobe o minor, `fix:`/`perf:` sobe o patch, `feat!:` ou `BREAKING CHANGE:` sobe o major. `docs:`, `ci:`, `chore:` e `refactor:` não geram versão. **O merge desse PR** cria a tag `vX.Y.Z` e o GitHub Release, e o `release.yml` gera e anexa o APK.
+- **Versão manual** (`.github/workflows/release.yml`): para pré-releases ou exceções, `make release VERSION=X.Y.Z` e depois `git push origin main vX.Y.Z`. Tags com sufixo (`v0.3.0-beta.1`) viram pré-release.
 
-Para gerar uma versão:
+O release traz `vitrola-music-vX.Y.Z.apk` e o `SHA256SUMS.txt`. O build fica numa action própria (`.github/actions/build-apk`), usada pelos três workflows.
 
-```bash
-make release VERSION=0.2.0       # sobe a versão em api/, frontend/ e mobile/, commit + tag v0.2.0
-git push origin main v0.2.0      # dispara o workflow de release
-```
+Requisito do release-please: em *Settings → Actions → General → Workflow permissions*, marque **Allow GitHub Actions to create and approve pull requests**. O PR de versão é aberto pelo `GITHUB_TOKEN`, por isso o CI não roda nele (limitação do GitHub); o código já foi testado no push da `main`.
 
 A versão do APK vem do `mobile/package.json`: `versionName` = `0.2.0` e `versionCode` = `major × 1.000.000 + minor × 1.000 + patch`. A tela Configurações → Versão mostra a mesma versão.
 

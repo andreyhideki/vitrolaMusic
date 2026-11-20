@@ -1,0 +1,34 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "bootstrap-sha": "66e4830657d0e5221f703325fb43a2b69341b116",
+  "include-component-in-tag": false,
+  "include-v-in-tag": true,
+  "pull-request-title-pattern": "chore: versão ${version}",
+  "packages": {
+    ".": {
+      "release-type": "simple",
+      "package-name": "vitrola-music",
+      "changelog-path": "CHANGELOG.md",
+      "changelog-sections": [
+        { "type": "feat", "section": "Novidades" },
+        { "type": "fix", "section": "Correções" },
+        { "type": "perf", "section": "Desempenho" },
+        { "type": "refactor", "section": "Refatoração", "hidden": true },
+        { "type": "docs", "section": "Documentação", "hidden": true },
+        { "type": "ci", "section": "CI", "hidden": true },
+        { "type": "chore", "section": "Manutenção", "hidden": true }
+      ],
+      "extra-files": [
+        { "type": "json", "path": "api/package.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "api/package-lock.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "api/package-lock.json", "jsonpath": "$.packages[''].version" },
+        { "type": "json", "path": "frontend/package.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "frontend/package-lock.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "frontend/package-lock.json", "jsonpath": "$.packages[''].version" },
+        { "type": "json", "path": "mobile/package.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "mobile/package-lock.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "mobile/package-lock.json", "jsonpath": "$.packages[''].version" }
+      ]
+    }
+  }
+}
