@@ -1,0 +1,56 @@
+# Verificação a cada push/PR: tipos e testes de api/, frontend/ e mobile/
+# (o mesmo que make typecheck, make test e make mobile-test/mobile-typecheck).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    name: API e frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            api/package-lock.json
+            frontend/package-lock.json
+      - name: Instalar dependências
+        run: |
+          npm ci --prefix api
+          npm ci --prefix frontend
+      - name: Typecheck da API
+        run: npm run typecheck --prefix api
+      - name: Typecheck do frontend
+        run: npm run typecheck --prefix frontend
+      - name: Testes do frontend
+        run: npm test --prefix frontend
+
+  mobile:
+    name: APK (código JS)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci --prefix mobile
+      - name: Typecheck do mobile
+        run: npm run typecheck --prefix mobile
+      - name: Testes do mobile
+        run: npm test --prefix mobile

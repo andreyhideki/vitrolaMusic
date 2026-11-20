@@ -6,7 +6,7 @@ COMPOSE ?= docker compose
 export VITROLA_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null)
 
 .DEFAULT_GOAL := help
-.PHONY: help check-docker fix-perms token up down restart logs ps build shell-api shell-web test typecheck audit reset local-install clean
+.PHONY: help check-docker fix-perms token up down restart logs ps build shell-api shell-web test typecheck audit reset local-install clean release
 
 help: ## Mostra os comandos disponíveis
 	@echo "Vitrola Music - comandos:"
@@ -81,6 +81,9 @@ local-install: ## Alternativa sem Docker: instala as dependências no host
 
 clean: check-docker ## Remove containers, volumes e imagens do projeto (não apaga ./data)
 	$(COMPOSE) down -v --rmi local
+
+release: ## Nova versão: sobe a versão dos package.json, commit e tag (make release VERSION=0.2.0)
+	@bash scripts/release.sh "$(VERSION)"
 
 # ---------- APK Android (mobile/) ----------
 # Roda no host: precisa de Node, JDK 21 e Android SDK (ANDROID_HOME). Não usa Docker.

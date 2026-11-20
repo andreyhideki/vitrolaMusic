@@ -4,6 +4,17 @@ apply plugin: 'com.android.application'
 // (Python + ffmpeg são grandes). Para emulador: ./gradlew assembleDebug -PvitrolaAbis=arm64-v8a,x86_64
 def vitrolaAbis = (project.findProperty('vitrolaAbis') ?: 'arm64-v8a').toString().split(',').collect { it.trim() }
 
+// Versão do APK = "version" de mobile/package.json (o `make release` sobe junto com api/ e frontend/).
+// versionCode = major * 1.000.000 + minor * 1.000 + patch: cresce a cada versão, como o Android exige.
+def vitrolaVersionName = new groovy.json.JsonSlurper().parse(file('../../package.json')).version.toString()
+def vitrolaVersionParts = (vitrolaVersionName =~ /^(\d+)\.(\d+)\.(\d+)/)
+if (!vitrolaVersionParts.find()) throw new GradleException("Versão inválida em mobile/package.json: ${vitrolaVersionName}")
+def vitrolaVersionCode = vitrolaVersionParts.group(1).toInteger() * 1000000 + vitrolaVersionParts.group(2).toInteger() * 1000 + vitrolaVersionParts.group(3).toInteger()
+
+// Assinatura do release (CI: secrets do GitHub). Sem VITROLA_KEYSTORE, o assembleRelease sai sem assinatura.
+// O Android só instala uma atualização assinada com a mesma chave da versão instalada.
+def vitrolaKeystore = System.getenv('VITROLA_KEYSTORE')
+
 android {
     namespace = "app.vitrola.music"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -11,8 +22,8 @@ android {
         applicationId "app.vitrola.music"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode vitrolaVersionCode
+        versionName vitrolaVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             abiFilters.addAll(vitrolaAbis)
@@ -30,8 +41,19 @@ android {
             useLegacyPackaging = true
         }
     }
+    signingConfigs {
+        if (vitrolaKeystore) {
+            release {
+                storeFile file(vitrolaKeystore)
+                storePassword System.getenv('VITROLA_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('VITROLA_KEY_ALIAS')
+                keyPassword System.getenv('VITROLA_KEY_PASSWORD') ?: System.getenv('VITROLA_KEYSTORE_PASSWORD')
+            }
+        }
+    }
     buildTypes {
         release {
+            if (vitrolaKeystore) signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

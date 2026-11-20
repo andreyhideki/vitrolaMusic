@@ -61,6 +61,7 @@ Principais comandos (`make help` lista todos):
 | `make clean` | Remove containers, volumes e imagens do projeto (não apaga `./data`) |
 | `make apk` / `make apk-install` | Gera o APK Android / instala no celular via USB (ver [App Android](#app-android-apk-sem-pc)) |
 | `make mobile-install` / `make mobile-test` / `make mobile-typecheck` | Dependências, testes e tipos do `mobile/` |
+| `make release VERSION=X.Y.Z` | Nova versão: sobe a versão dos `package.json`, faz o commit e cria a tag (ver [Versões](#versões-github-actions)) |
 
 Os containers usam `node:24-bookworm`. Depois de mudar dependências, rode `make reset` (e `make mobile-install` para o APK).
 
@@ -175,6 +176,33 @@ O `adb` do Linux no WSL2 não enxerga aparelhos USB. Por isso o `make apk-instal
 4. Rode `make apk-install`. Se aparecer `protocol fault` ou o aparelho não for listado, encerre o `adb` do Linux (`adb kill-server`): os dois disputam a porta 5037.
 
 Para depurar a interface no aparelho, abra `chrome://inspect` no Chrome do Windows com o celular conectado.
+
+### Versões (GitHub Actions)
+
+- **CI** (`.github/workflows/ci.yml`): a cada push na `main` e em PRs roda o typecheck da API, do frontend e do `mobile/` e os testes do frontend e do `mobile/`.
+- **Release** (`.github/workflows/release.yml`): o push de uma tag `vX.Y.Z` confere se os três `package.json` estão nessa versão, roda os testes, gera o APK de release **assinado** e publica um GitHub Release com `vitrola-music-vX.Y.Z.apk`, o `SHA256SUMS.txt` e notas geradas a partir dos commits. Tags com sufixo (`v0.3.0-beta.1`) viram pré-release.
+
+Para gerar uma versão:
+
+```bash
+make release VERSION=0.2.0       # sobe a versão em api/, frontend/ e mobile/, commit + tag v0.2.0
+git push origin main v0.2.0      # dispara o workflow de release
+```
+
+A versão do APK vem do `mobile/package.json`: `versionName` = `0.2.0` e `versionCode` = `major × 1.000.000 + minor × 1.000 + patch`. A tela Configurações → Versão mostra a mesma versão.
+
+**Assinatura (configurar uma vez).** O Android só instala uma atualização assinada com a **mesma chave** da versão instalada; se a chave mudar, é preciso desinstalar o app, e isso apaga a biblioteca do celular. Cadastre em *Settings → Secrets and variables → Actions*:
+
+| Secret | Valor |
+| --- | --- |
+| `ANDROID_KEYSTORE_BASE64` | o keystore em base64: `base64 -w0 vitrola.keystore` |
+| `ANDROID_KEYSTORE_PASSWORD` | senha do keystore |
+| `ANDROID_KEY_ALIAS` | alias da chave |
+| `ANDROID_KEY_PASSWORD` | senha da chave (opcional; se vazio, usa a do keystore) |
+
+- Para continuar atualizando um app já instalado com `make apk`, use o keystore de debug da máquina que gerou o APK (`~/.android/debug.keystore`, senha `android`, alias `androiddebugkey`). Se perder esse arquivo, as atualizações deixam de instalar por cima.
+- Para uma chave nova: `keytool -genkeypair -v -keystore vitrola.keystore -alias vitrola -keyalg RSA -keysize 4096 -validity 10000`. Guarde o keystore e a senha fora do repositório.
+- Localmente, o mesmo build assinado sai com `VITROLA_KEYSTORE=/caminho/vitrola.keystore VITROLA_KEYSTORE_PASSWORD=... VITROLA_KEY_ALIAS=... npm run apk:release` (em `mobile/`). Sem `VITROLA_KEYSTORE`, o `assembleRelease` gera um APK sem assinatura.
 
 ## Como as músicas chegam ao player
 
